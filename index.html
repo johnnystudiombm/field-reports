@@ -210,6 +210,7 @@ table.rtable td.cf { width: 96px; }
 .it-ph button { padding: 0; border: 1px solid var(--rule); background: var(--sheet-2); cursor: zoom-in; border-radius: 3px; overflow: hidden; position: relative; aspect-ratio: 4 / 3; max-width: 100%; }
 .it-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .it-ph .tag, .tag { position: absolute; left: 4px; top: 4px; font-family: var(--f-mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: rgba(207, 47, 37, .92); padding: 2px 5px; border-radius: 3px; }
+.it-ph .ph-when { font-size: 11px; color: var(--ink-3); }
 .it-pdf { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mbm); font-weight: 600; }
 .choice { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--sheet); cursor: pointer; color: var(--ink); }
 .choice:hover, .choice:focus-visible { border-color: var(--mbm); background: var(--mbm-soft); }
@@ -770,7 +771,22 @@ table.rtable td.cf { width: 96px; }
     const cur = new Map();
     asc.forEach(r => (r.items || []).forEach(it => { if (it.key) cur.set(it.key, { item: it, report: r }); }));
     S.current = cur;
+    const seen = new Map();
+    asc.forEach(r => (r.items || []).forEach(it => (it.photos || []).forEach(p => { [p.id, p.original].forEach(id => { if (id && !seen.has(id)) seen.set(id, r.visitDate || r.reportDate); }); })));
+    S.photoFirstSeen = seen;
     S.reports.sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
+  }
+  // When a photo was uploaded. Photos from before upload dates were recorded fall back to the site meeting they first appeared in.
+  const fmtWhen = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+  function photoWhen(p) {
+    if (p.addedAt) return 'Uploaded ' + fmtWhen(p.addedAt);
+    const first = S.photoFirstSeen && S.photoFirstSeen.get(p.original || p.id);
+    return first ? 'From the ' + mdy(first) + ' site meeting' : '';
+  }
+  function photoDateMDY(p) {
+    if (p.addedAt) { const d = new Date(p.addedAt); if (!isNaN(d)) return pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + '/' + d.getFullYear(); }
+    const first = S.photoFirstSeen && S.photoFirstSeen.get(p.original || p.id);
+    return first ? mdy(first) : '';
   }
   const projectNames = () => [...new Set(S.reports.map(r => r.project).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const partiesFor = (project) => (project && Array.isArray(S.partiesByProject[project]) ? S.partiesByProject[project] : S.parties);
@@ -1009,7 +1025,7 @@ table.rtable td.cf { width: 96px; }
       else if (x.dataset.x === 'save') {
         if (S.pending.some(p => p.key === copy.key)) { toast('Wait for uploads to finish.'); return; }
         x.disabled = true; x.textContent = 'Saving…';
-        const photos = copy.photos.map(p => { const q = { id: p.id, kind: p.kind || 'image', name: p.name || '', caption: (p.caption || '').trim(), size: p.size || 0 }; if (p.original) q.original = p.original; return q; });
+        const photos = copy.photos.map(p => { const q = { id: p.id, kind: p.kind || 'image', name: p.name || '', caption: (p.caption || '').trim(), size: p.size || 0 }; if (p.original) q.original = p.original; if (p.addedAt) q.addedAt = p.addedAt; if (p.markedAt) q.markedAt = p.markedAt; return q; });
         const fields = Object.fromEntries(Object.entries(copy.fields || {}).filter(([, v]) => typeof v === 'string' && v.trim()).map(([k, v]) => [k, v.trim()]));
         const ok = await updateItem(report.id, copy.key, {
           title: (copy.title || '').trim(), desc: (copy.desc || '').trim(), critical: !!copy.critical, responsible: (copy.responsible || '').trim(),
@@ -1029,7 +1045,7 @@ table.rtable td.cf { width: 96px; }
 
   function photosHTML(list, lbKey) {
     const imgs = list.filter(p => p.kind !== 'pdf'), docs = list.filter(p => p.kind === 'pdf');
-    return `<div class="it-photos">${imgs.map((p, k) => `<div class="it-ph">${p.caption ? `<span class="lab">${esc(p.caption)}</span>` : ''}<button data-action="lightbox" data-lb="${esc(lbKey)}" data-k="${k}" aria-label="Open photo">${p.original ? '<span class="tag">Marked up</span>' : ''}<img src="${blobUrl(p.id)}" alt="${esc(p.caption || 'Item photo')}" loading="lazy" onerror="this.style.visibility='hidden'"></button></div>`).join('')}
+    return `<div class="it-photos">${imgs.map((p, k) => `<div class="it-ph">${p.caption ? `<span class="lab">${esc(p.caption)}</span>` : ''}<button data-action="lightbox" data-lb="${esc(lbKey)}" data-k="${k}" aria-label="Open photo">${p.original ? '<span class="tag">Marked up</span>' : ''}<img src="${blobUrl(p.id)}" alt="${esc(p.caption || 'Item photo')}" loading="lazy" onerror="this.style.visibility='hidden'"></button>${photoWhen(p) ? `<span class="ph-when">${esc(photoWhen(p))}</span>` : ''}</div>`).join('')}
       ${docs.map(p => `<a class="it-pdf" href="${blobUrl(p.id)}" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l5 5v13H7z" stroke="currentColor" stroke-width="1.8"/></svg>${esc(p.caption || p.name || 'Document')}</a>`).join('')}</div>`;
   }
 
@@ -1087,6 +1103,51 @@ table.rtable td.cf { width: 96px; }
     catch (e) { writeError(e); if (!document.querySelector('.overlay')) render(); return false; }
   }
   const setItemStatus = (reportId, key, status) => updateItem(reportId, key, { status }, 'Item marked ' + STATUS[status].toLowerCase());
+
+  // ---------- copy as text ----------
+  function reportText(r) {
+    const cfs = fieldsFor(r.project);
+    const L = [`${reportTitle(r)}`, `Project: ${r.project}${r.projectNo ? ' (' + r.projectNo + ')' : ''}`, `Date: ${longDate(r.reportDate)}`, `Site Meeting: ${longDate(r.visitDate || r.reportDate)}`, `Revision: ${r.revision || 'n/a'}`, ''];
+    (r.items || []).slice().sort((a, b) => (a.num || 999) - (b.num || 999)).forEach(i => {
+      L.push(`${i.num || '-'}. [${STATUS[normStatus(i.status)].toUpperCase()}] ${i.title || ''}${i.critical ? ' (CRITICAL)' : ''}`);
+      const meta = [i.responsible ? 'Responsible: ' + i.responsible : '', ...cfs.map(f => fieldVal(i, f) ? f.name + ': ' + fieldVal(i, f) : '')].filter(Boolean);
+      if (meta.length) L.push(meta.join(' | '));
+      L.push(plain(i.desc));
+      (i.updates || []).filter(u => u.note).forEach(u => L.push(`${mdy(u.date)}: ${plain(u.note)}`));
+      if (i.note) L.push(`${mdy(r.visitDate || r.reportDate)}: ${plain(i.note)}`);
+      L.push('');
+    });
+    return L.join('\n');
+  }
+  async function copyText(r) {
+    const txt = reportText(r);
+    try { await navigator.clipboard.writeText(txt); toast('Report copied. Paste it into an email or message.'); }
+    catch (e) {
+      const o = document.createElement('div'); o.className = 'overlay';
+      o.innerHTML = `<div class="dialog wide"><h4>Copy report text</h4><textarea class="input" id="copy-ta" style="min-height:300px;font-size:13px" readonly>${esc(txt)}</textarea><div class="actions"><button class="btn primary" data-x="close">Done</button></div></div>`;
+      o.addEventListener('click', (ev) => { if (ev.target.closest('[data-x]') || ev.target === o) o.remove(); });
+      document.body.appendChild(o); const ta = $('#copy-ta', o); ta.focus(); ta.select();
+    }
+  }
+
+  // ---------- photo viewer ----------
+  function lightbox(list, k) {
+    if (!list || !list.length) return;
+    const o = document.createElement('div'); o.className = 'overlay lb'; o.style.zIndex = 70;
+    const draw = () => {
+      const a = list[k], when = photoWhen(a);
+      o.innerHTML = `<img src="${blobUrl(a.id)}" alt="${esc(a.caption || '')}"><div class="lb-cap">${esc(a.caption || '')}${when ? `<div style="opacity:.75;font-size:13px">${esc(when)}${a.markedAt ? ' · marked up ' + esc(fmtWhen(a.markedAt)) : ''}</div>` : ''}</div>
+        <div class="lb-bar">${list.length > 1 ? '<button class="btn sm" data-x="prev">← Prev</button>' : ''}<span class="btn sm" style="cursor:default">${k + 1} / ${list.length}</span>${list.length > 1 ? '<button class="btn sm" data-x="next">Next →</button>' : ''}
+        ${a.original ? `<a class="btn sm" href="${blobUrl(a.original)}" target="_blank" rel="noopener">View original</a>` : ''}
+        <a class="btn sm" href="${blobUrl(a.id)}" target="_blank" rel="noopener">Full size</a><button class="btn sm" data-x="close">Close</button></div>`;
+    };
+    const step = (d) => { k = (k + d + list.length) % list.length; draw(); };
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } else if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1); };
+    const close = () => { o.remove(); document.removeEventListener('keydown', onKey, true); };
+    o.addEventListener('click', (e) => { const x = e.target.closest('[data-x]'); if (x) { if (x.dataset.x === 'close') close(); else step(x.dataset.x === 'next' ? 1 : -1); } else if (e.target === o) close(); });
+    document.addEventListener('keydown', onKey, true);
+    draw(); document.body.appendChild(o);
+  }
 
   // Per-project custom columns: add, rename, reorder, delete; list columns keep their options.
   function columnsDialog(project) {
@@ -1331,7 +1392,7 @@ table.rtable td.cf { width: 96px; }
       <div class="att">
         <div class="pv">${a.kind === 'pdf' ? '<span class="pdf">PDF</span>' : `${a.original ? '<span class="tag">Marked up</span>' : ''}<img src="${blobUrl(a.id)}" alt="" onerror="this.style.visibility='hidden'">`}</div>
         <div class="body">
-          <div class="nm" title="${esc(a.name)}">${esc(a.name || 'file')}</div>
+          <div class="nm" title="${esc(a.name)}">${esc(photoWhen(a) || a.name || 'file')}</div>
           <input class="input" id="cap-${k}-${i}" data-cap="${i}" value="${esc(a.caption || '')}" placeholder="Label, e.g. Photo:" aria-label="Label shown above the photo">
           <div class="row-btns">
             ${a.kind !== 'pdf' && S.assets ? `<button type="button" class="btn sm red" data-action="markup" data-i="${i}">Mark up</button>` : ''}
@@ -1411,7 +1472,7 @@ table.rtable td.cf { width: 96px; }
         catch (e) { if (e && e.code === 'store_unavailable') { await new Promise(z => setTimeout(z, 1200)); r = await S.assets.upload(blob, opts); } else throw e; }
         S.sessionUploads.add(r.id);
         const it = editableItem(key);
-        if (it) it.photos.push({ id: r.id, kind, name: kind === 'image' ? (f.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg' : f.name, caption: kind === 'image' ? 'Photo:' : '', size: r.sizeBytes });
+        if (it) it.photos.push({ id: r.id, kind, name: kind === 'image' ? (f.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg' : f.name, caption: kind === 'image' ? 'Photo:' : '', size: r.sizeBytes, addedAt: new Date().toISOString() });
       } catch (e) { uploadErr(e, p.name); }
       S.pending = S.pending.filter(x => x !== p);
       refreshItemPhotos(key); saveLocalDraft();
@@ -1445,7 +1506,7 @@ table.rtable td.cf { width: 96px; }
       key: i.key, num: i.num || ++maxNum, title: (i.title || '').trim(), desc: (i.desc || '').trim(), critical: !!i.critical,
       responsible: (i.responsible || '').trim(), status: normStatus(i.status), note: (i.note || '').trim(),
       updates: (i.updates || []).map(u => ({ date: u.date, reportId: u.reportId || null, status: normStatus(u.status), note: u.note || '' })),
-      photos: (i.photos || []).map(p => { const o = { id: p.id, kind: p.kind || 'image', name: p.name || '', caption: (p.caption || '').trim(), size: p.size || 0 }; if (p.original) o.original = p.original; return o; }),
+      photos: (i.photos || []).map(p => { const o = { id: p.id, kind: p.kind || 'image', name: p.name || '', caption: (p.caption || '').trim(), size: p.size || 0 }; if (p.original) o.original = p.original; if (p.addedAt) o.addedAt = p.addedAt; if (p.markedAt) o.markedAt = p.markedAt; return o; }),
       fields: Object.fromEntries(Object.entries(i.fields || {}).filter(([, v]) => typeof v === 'string' && v.trim()).map(([k, v]) => [k, v.trim()])),
       carriedFrom: i.carriedFrom || null
     }));
@@ -1700,7 +1761,11 @@ table.rtable td.cf { width: 96px; }
       it.updates.forEach(u => wrapRich(`${u.dateMDY}: ${u.note}`, cellW, FS).forEach(l => blocks.push({ kind: 'line', line: l, color })));
       if (it.responsible) blocks.push({ kind: 'line', line: [{ t: 'Responsible: ' + it.responsible, b: false }], color: GREY });
       it.photos.forEach(p => {
-        if (p.caption) wrapRich(p.caption, cellW, FS).forEach(l => blocks.push({ kind: 'line', line: l, color: INK }));
+        if (p.caption && p.dateText) {
+          const capLines = wrapRich(p.caption, cellW - 90, FS);
+          capLines.forEach((l, li) => blocks.push({ kind: 'line', line: l, color: INK, right: li === 0 ? p.dateText : '' }));
+        } else if (p.caption) wrapRich(p.caption, cellW, FS).forEach(l => blocks.push({ kind: 'line', line: l, color: INK }));
+        else if (p.dateText) blocks.push({ kind: 'line', line: [{ t: '', b: false }], color: INK, right: p.dateText });
         if (p.data) {
           const maxW = Math.min(cellW, 300), maxH = 300;
           const s = Math.min(maxW / p.w, maxH / p.h);
@@ -1731,7 +1796,11 @@ table.rtable td.cf { width: 96px; }
           const t = doc.splitTextToSize(b.text, cellW)[0];
           doc.text(t, cellX, y + 7.6); doc.setDrawColor(...color); doc.setLineWidth(0.5); doc.line(cellX, y + 8.8, cellX + doc.getTextWidth(t), y + 8.8);
           y += LH;
-        } else if (b.kind === 'line') { drawRichLine(b.line, cellX, y + 7.6, FS, b.color); y += LH; }
+        } else if (b.kind === 'line') {
+          drawRichLine(b.line, cellX, y + 7.6, FS, b.color);
+          if (b.right) { doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...GREY); doc.text(b.right, cellX + cellW, y + 7.6, { align: 'right' }); }
+          y += LH;
+        }
         else { doc.addImage(b.data, 'JPEG', cellX, y + 1, b.w, b.h, undefined, 'FAST'); y += h; }
       });
       if (first && y < bodyTop + minBody) y = bodyTop + minBody;
@@ -1794,7 +1863,8 @@ table.rtable td.cf { width: 96px; }
           if (p.kind === 'pdf') { photos.push({ caption: p.caption, pdfName: p.name || 'document.pdf' }); continue; }
           const im = await loadForPdf(p.id);
           done++; $('#pg-t', o).textContent = `Preparing photos (${done} of ${photoTotal})…`; $('#pg-b', o).style.width = Math.round(done / Math.max(1, photoTotal) * 100) + '%';
-          photos.push(im ? { caption: p.caption, ...im } : { caption: (p.caption ? p.caption + ' ' : '') + '[photo unavailable]' });
+          const dt = photoDateMDY(p);
+          photos.push(im ? { caption: p.caption, dateText: dt ? 'Uploaded ' + dt : '', ...im } : { caption: (p.caption ? p.caption + ' ' : '') + '[photo unavailable]', dateText: dt ? 'Uploaded ' + dt : '' });
         }
         const st = normStatus(it.status);
         R.items.push({
@@ -1867,7 +1937,7 @@ table.rtable td.cf { width: 96px; }
       const i = +b.dataset.i, att = it.photos[i];
       openMarkup(att.id, async (res) => {
         S.sessionUploads.add(res.id);
-        it.photos[i] = { ...att, id: res.id, original: att.original || att.id, size: res.sizeBytes };
+        it.photos[i] = { ...att, id: res.id, original: att.original || att.id, size: res.sizeBytes, markedAt: new Date().toISOString() };
         refreshItemPhotos(it.key); saveLocalDraft(); toast('Markup added to this item');
       });
     }
