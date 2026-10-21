@@ -1,0 +1,1970 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Studio MBM Field Reports</title>
+<style>
+/* Layout: Studio MBM's field report as a working app. Logo top-left on a white title bar; one working column; reports render like the issued PDF (# | Status | Date/Description/Photo). MBM blue is the brand accent; redline red is reserved for open and critical items and markups. */
+:root {
+  --paper: #eff1f6;
+  --sheet: #ffffff;
+  --sheet-2: #f5f6fa;
+  --ink: #1a1f2b;
+  --ink-2: #545c6c;
+  --ink-3: #8a91a0;
+  --rule: #d8dce6;
+  --rule-strong: #bcc2d0;
+  --mbm: #293d9a;
+  --mbm-ink: #ffffff;
+  --mbm-soft: #e7eaf7;
+  --redline: #cf2f25;
+  --redline-soft: #fbe6e4;
+  --amber: #a5650c;
+  --amber-soft: #fbefd9;
+  --green: #2a7748;
+  --green-soft: #e0f1e6;
+  --shadow: 0 1px 2px rgba(20, 28, 60, .06), 0 6px 20px rgba(20, 28, 60, .06);
+  --scrim: rgba(12, 15, 26, .72);
+  --f-display: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --f-body: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --f-mono: Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10131b; --sheet: #181c27; --sheet-2: #1e2330; --ink: #e6e9f0; --ink-2: #a2a9b8; --ink-3: #6f7686;
+    --rule: #2a3040; --rule-strong: #3a4256; --mbm: #93a5f5; --mbm-ink: #10142a; --mbm-soft: #1e2645;
+    --redline: #ff6a5e; --redline-soft: #3b1c1a; --amber: #e6ae55; --amber-soft: #352914; --green: #62c38b; --green-soft: #16301f;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25); --scrim: rgba(0,0,0,.8); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10131b; --sheet: #181c27; --sheet-2: #1e2330; --ink: #e6e9f0; --ink-2: #a2a9b8; --ink-3: #6f7686;
+  --rule: #2a3040; --rule-strong: #3a4256; --mbm: #93a5f5; --mbm-ink: #10142a; --mbm-soft: #1e2645;
+  --redline: #ff6a5e; --redline-soft: #3b1c1a; --amber: #e6ae55; --amber-soft: #352914; --green: #62c38b; --green-soft: #16301f;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25); --scrim: rgba(0,0,0,.8); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--sheet); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--mbm); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Title bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--sheet); border-bottom: 1px solid var(--rule); }
+.bar-in { max-width: 1120px; margin: 0 auto; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; background: none; border: 0; padding: 0; cursor: pointer; color: var(--mbm); }
+.brand svg { height: 34px; width: auto; display: block; flex: none; }
+.brand .div { width: 1px; height: 28px; background: var(--rule-strong); }
+.brand .lbl { font-family: var(--f-display); font-weight: 700; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
+.bar .spacer { flex: 1; }
+@media (max-width: 520px) { .brand .div, .brand .lbl { display: none; } }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 20px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--rule-strong); background: var(--sheet); font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; text-decoration: none; color: var(--ink); }
+.btn:hover { border-color: var(--ink-3); }
+.btn.primary { background: var(--mbm); color: var(--mbm-ink); border-color: var(--mbm); }
+.btn.primary:hover { opacity: .92; }
+.btn.red { color: var(--redline); }
+.btn.ghost { border-color: transparent; background: transparent; }
+.btn.ghost:hover { background: var(--sheet-2); }
+.btn.sm { min-height: 30px; padding: 0 10px; font-size: 13px; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+
+.eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+h2.view-title { font-family: var(--f-display); font-weight: 700; font-size: 24px; line-height: 1.05; margin: 0; text-transform: uppercase; letter-spacing: .01em; text-wrap: balance; }
+.muted { color: var(--ink-2); }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin: 14px 0 16px; }
+.tab { background: none; border: 0; padding: 10px 14px; font-family: var(--f-display); font-weight: 700; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--mbm); }
+.tab .n { font-family: var(--f-mono); font-size: 12px; font-weight: 400; color: var(--ink-3); margin-left: 4px; }
+
+/* Status chips (filters) */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--rule); background: var(--sheet); cursor: pointer; text-align: left; }
+.chip .k { font-size: 13px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+.chip .k::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
+.chip.open .k::before { background: var(--redline); }
+.chip.pending .k::before { background: var(--amber); }
+.chip.closed .k::before { background: var(--green); }
+.chip .v { font-family: var(--f-display); font-weight: 700; font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { border-color: var(--mbm); box-shadow: 0 0 0 1px var(--mbm) inset; background: var(--mbm-soft); }
+
+/* Filters */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 14px; }
+.input, select.input, textarea.input { width: 100%; min-height: 40px; padding: 8px 11px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--sheet); }
+textarea.input { min-height: 88px; resize: vertical; line-height: 1.5; }
+.input::placeholder { color: var(--ink-3); }
+.toolbar .search { flex: 1 1 220px; min-width: 0; }
+.toolbar select { flex: 0 1 200px; width: auto; min-width: 0; }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+.check input { width: 16px; height: 16px; accent-color: var(--redline); }
+.tally { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; }
+
+/* Items tracker */
+.trk { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.trk { overflow-x: auto; }
+.trk-head, .trk-row { display: grid; grid-template-columns: var(--trk-cols, 52px minmax(0, 1fr) 150px 110px 100px 112px); gap: 14px; min-width: 760px; align-items: start; padding: 12px 16px; }
+.trk-head { background: var(--sheet-2); border-bottom: 1px solid var(--rule); font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding-block: 9px; }
+.trk-row { border-bottom: 1px solid var(--rule); cursor: pointer; width: 100%; background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; }
+.trk-row:last-child { border-bottom: 0; }
+.trk-row:hover { background: var(--sheet-2); }
+.trk-num { font-family: var(--f-display); font-weight: 700; font-size: 18px; line-height: 1; font-variant-numeric: tabular-nums; }
+.trk-title { font-weight: 600; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; }
+.trk-desc { font-size: 14px; color: var(--ink-2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.trk-desc.crit, .crit-text { color: var(--redline); }
+.trk-upd { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.trk-upd b { font-family: var(--f-mono); font-weight: 500; font-size: 12px; color: var(--ink-3); }
+.trk-cell { font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+.trk-cell small { display: block; font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); }
+.trk-lbl { display: none; }
+@media (max-width: 860px) {
+  .trk-head { display: none; }
+  .trk-head, .trk-row { min-width: 0; }
+  .trk-row { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 6px 12px; }
+  .trk-row .c-cf { grid-column: 1 / -1; }
+  .trk-row .trk-num { grid-row: 1; grid-column: 1; }
+  .trk-row .c-proj { grid-row: 1; grid-column: 2; align-self: center; }
+  .trk-row .c-status { grid-row: 1; grid-column: 3; justify-self: end; }
+  .trk-row .c-main { grid-row: 2; grid-column: 1 / -1; }
+  .trk-row .c-resp { grid-row: 3; grid-column: 1 / 3; }
+  .trk-row .c-last { grid-row: 3; grid-column: 3; justify-self: end; }
+  .trk-lbl { display: inline; color: var(--ink-3); font-size: 12px; margin-right: 4px; }
+}
+
+/* Pills */
+.pill { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.pill.open { color: var(--redline); background: var(--redline-soft); }
+.pill.pending { color: var(--amber); background: var(--amber-soft); }
+.pill.closed { color: var(--green); background: var(--green-soft); }
+.pill.none { color: var(--ink-3); background: var(--sheet-2); }
+.pill.crit { color: var(--redline); background: transparent; border: 1px solid var(--redline); }
+.pill.crit::before { display: none; }
+.status-sel { border: 1px solid var(--rule-strong); border-radius: 999px; padding: 3px 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; background: var(--sheet); cursor: pointer; }
+.cell-sel { border: 1px solid var(--rule-strong); border-radius: 6px; padding: 4px 6px; font-size: 13px; background: var(--sheet); cursor: pointer; max-width: 100%; color: var(--ink); }
+.cell-sel.unset { color: var(--ink-3); border-style: dashed; }
+.cell-sel:hover { border-color: var(--mbm); }
+.status-sel.open { color: var(--redline); border-color: var(--redline); }
+.status-sel.pending { color: var(--amber); border-color: var(--amber); }
+.status-sel.closed { color: var(--green); border-color: var(--green); }
+
+/* Report list */
+.rows { display: grid; gap: 10px; }
+.row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 16px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; cursor: pointer; text-align: left; width: 100%; }
+.row:hover { border-color: var(--rule-strong); box-shadow: var(--shadow); }
+.datecell { text-align: center; border-right: 1px solid var(--rule); padding-right: 14px; }
+.datecell .m { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-3); text-transform: uppercase; }
+.datecell .d { font-family: var(--f-display); font-weight: 700; font-size: 24px; line-height: 1; }
+.datecell .y { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); }
+.row-main { min-width: 0; }
+.row-proj { font-family: var(--f-display); font-weight: 700; font-size: 16px; line-height: 1.15; }
+.row-meta { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.row-side { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+@media (max-width: 560px) {
+  .row { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 12px; }
+  .row-side { grid-column: 1 / -1; justify-content: flex-start; }
+  .datecell { padding-right: 10px; }
+}
+
+.empty { background: var(--sheet); border: 1px dashed var(--rule-strong); border-radius: 8px; padding: 36px 20px; text-align: center; }
+.empty h3 { font-family: var(--f-display); font-size: 17px; text-transform: uppercase; margin: 0 0 6px; }
+.empty p { margin: 0 auto 16px; max-width: 48ch; color: var(--ink-2); }
+.notice { padding: 10px 14px; border-radius: 6px; background: var(--mbm-soft); color: var(--ink); font-size: 14px; margin-bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+
+/* Report sheet (mirrors the PDF) */
+.back { margin-bottom: 14px; }
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: clamp(18px, 4vw, 44px); }
+.sheet-run { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--ink-2); margin-bottom: 18px; gap: 12px; }
+.sheet h2 { font-family: var(--f-body); font-weight: 700; font-size: clamp(24px, 4vw, 30px); margin: 0 0 12px; line-height: 1.15; }
+.kv { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 12px; font-size: 14px; margin-bottom: 18px; }
+.kv dt { font-weight: 700; }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.disclaim { font-size: 13px; color: var(--ink-2); max-width: 90ch; margin: 0 0 14px; }
+.legend { border-top: 1px solid var(--ink); padding-top: 10px; font-size: 13px; margin-bottom: 18px; }
+.legend p { margin: 0; }
+.rtable-wrap { overflow-x: auto; }
+table.rtable { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+table.rtable th, table.rtable td { border: 1px solid var(--ink); padding: 6px 8px; vertical-align: top; text-align: left; }
+table.rtable th { font-weight: 700; }
+table.rtable td.n { width: 44px; font-weight: 700; }
+table.rtable td.s { width: 120px; }
+table.rtable td.cf { width: 96px; }
+.it-title { text-decoration: underline; text-underline-offset: 2px; }
+.it-desc { white-space: pre-wrap; overflow-wrap: anywhere; }
+.it-desc strong { font-weight: 700; }
+.it-upd { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.it-upd .dt { font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); margin-right: 6px; }
+.it-photos { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.it-ph { display: grid; gap: 3px; width: min(220px, 100%); }
+.it-ph .lab { font-size: 13px; }
+.it-ph button { padding: 0; border: 1px solid var(--rule); background: var(--sheet-2); cursor: zoom-in; border-radius: 3px; overflow: hidden; position: relative; aspect-ratio: 4 / 3; max-width: 100%; }
+.it-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.it-ph .tag, .tag { position: absolute; left: 4px; top: 4px; font-family: var(--f-mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: rgba(207, 47, 37, .92); padding: 2px 5px; border-radius: 3px; }
+.it-pdf { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mbm); font-weight: 600; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.later { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+.later button { background: none; border: 0; padding: 0; color: var(--mbm); text-decoration: underline; cursor: pointer; font-size: 12px; }
+
+/* Form */
+.form { display: grid; gap: 20px; }
+.fs { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 18px; display: grid; gap: 14px; }
+.fs > h3 { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .03em; display: flex; align-items: center; gap: 10px; }
+.fs > h3 .n { font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); font-weight: 400; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.fld { display: grid; gap: 5px; min-width: 0; }
+.fld label, .fld .lb { font-size: 13px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fld .req { color: var(--redline); }
+.hint { font-size: 12px; color: var(--ink-3); }
+.err { color: var(--redline); font-size: 13px; }
+.bold-btn { border: 1px solid var(--rule-strong); background: var(--sheet); border-radius: 4px; font-weight: 700; font-size: 12px; padding: 1px 8px; cursor: pointer; color: var(--ink); }
+.icards { display: grid; gap: 14px; }
+.icard { border: 1px solid var(--rule-strong); border-radius: 8px; padding: 14px; display: grid; gap: 12px; background: var(--sheet); }
+.icard.carried { border-left: 4px solid var(--mbm); }
+.icard.is-crit { border-color: var(--redline); }
+.icard-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.inum { font-family: var(--f-display); font-weight: 700; font-size: 17px; line-height: 1; }
+.inum small { font-family: var(--f-mono); font-size: 11px; font-weight: 400; color: var(--ink-3); margin-left: 6px; letter-spacing: .04em; }
+.icard-head .sp { flex: 1; }
+.icard-head .status-sel { padding: 6px 10px; font-size: 13px; }
+.hist { background: var(--sheet-2); border-radius: 6px; padding: 10px 12px; display: grid; gap: 6px; font-size: 14px; }
+.hist .h-row { white-space: pre-wrap; overflow-wrap: anywhere; }
+.hist .dt { font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); margin-right: 6px; }
+.ph-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.att { border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--sheet); display: grid; min-width: 0; }
+.att .pv { aspect-ratio: 4 / 3; max-width: 100%; background: var(--sheet-2); display: grid; place-items: center; position: relative; }
+.att .pv img { width: 100%; height: 100%; object-fit: cover; }
+.att .pv .pdf { font-family: var(--f-display); font-weight: 700; font-size: 20px; color: var(--redline); }
+.att .body { padding: 8px; display: grid; gap: 6px; }
+.att .nm { font-size: 11px; color: var(--ink-3); font-family: var(--f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.att .body .input { min-height: 32px; padding: 5px 8px; font-size: 13px; }
+.att .row-btns { display: flex; gap: 6px; }
+.att .row-btns .btn { flex: 1; padding: 0 6px; }
+.att.pending .pv { color: var(--ink-3); font-size: 13px; }
+.up-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.up-row.over { outline: 2px dashed var(--mbm); outline-offset: 4px; border-radius: 6px; }
+.spin { width: 22px; height: 22px; border: 2px solid var(--rule-strong); border-top-color: var(--mbm); border-radius: 50%; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; position: sticky; bottom: 0; padding-block: 12px calc(12px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--paper) 70%, transparent); }
+.icon-btn { width: 34px; height: 34px; border: 1px solid var(--rule); background: var(--sheet); border-radius: 6px; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
+.icon-btn:hover { color: var(--redline); border-color: var(--redline); }
+.icon-btn svg { width: 16px; height: 16px; }
+
+/* Overlays */
+.overlay { position: fixed; inset: 0; z-index: 50; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.dialog { background: var(--sheet); border-radius: 10px; padding: 20px; width: min(440px, 100%); box-shadow: var(--shadow); display: grid; gap: 14px; max-height: 100%; overflow: auto; }
+.dialog h4 { margin: 0; font-family: var(--f-display); font-size: 17px; text-transform: uppercase; }
+.dialog p { margin: 0; color: var(--ink-2); }
+.dialog .actions { justify-content: flex-end; margin: 0; }
+.dialog.wide { width: min(760px, 100%); }
+.tl { display: grid; gap: 0; }
+.tl-e { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.tl-e:first-child { border-top: 0; }
+.tl-e .d { font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); }
+.tl-e .t { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.lb { flex-direction: column; gap: 10px; }
+.lb img { max-width: 100%; max-height: calc(100% - 90px); object-fit: contain; border-radius: 4px; background: #000; }
+.lb .lb-cap { color: #f1f3f5; font-size: 14px; text-align: center; max-width: 70ch; }
+.lb .lb-bar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.lb .btn { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.25); }
+.prog { display: grid; gap: 10px; }
+.prog .bar2 { height: 6px; background: var(--sheet-2); border-radius: 3px; overflow: hidden; }
+.prog .bar2 i { display: block; height: 100%; width: 0; background: var(--mbm); transition: width .2s; }
+
+/* Markup editor */
+.mk { position: fixed; inset: 0; z-index: 60; background: #0d1014; display: flex; flex-direction: column; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); color: #eef1f4; }
+.mk-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px; border-bottom: 1px solid #262d35; }
+.mk-tools .grp { display: flex; gap: 4px; align-items: center; padding-right: 8px; margin-right: 2px; border-right: 1px solid #262d35; }
+.mk-tools .grp:last-child { border-right: 0; }
+.tool { min-width: 38px; height: 36px; padding: 0 9px; border-radius: 6px; border: 1px solid #333c46; background: #171c22; color: #eef1f4; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.tool[aria-pressed="true"] { background: #eef1f4; color: #0d1014; border-color: #eef1f4; }
+.tool svg { width: 18px; height: 18px; }
+.swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #333c46; cursor: pointer; padding: 0; }
+.swatch[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px #0d1014 inset; }
+.mk-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 12px; position: relative; overflow: hidden; }
+.mk-stage canvas { max-width: 100%; max-height: 100%; touch-action: none; cursor: crosshair; background: #000; }
+.mk-text { position: absolute; z-index: 2; min-width: 160px; padding: 6px 8px; border-radius: 4px; border: 2px solid #fff; background: rgba(13,16,20,.9); color: #fff; font: 600 16px var(--f-body); }
+.mk-foot { display: flex; gap: 8px; justify-content: flex-end; padding: 10px 12px; border-top: 1px solid #262d35; flex-wrap: wrap; align-items: center; }
+.mk-foot .hint { color: #8a949e; flex: 1; min-width: 160px; }
+.mk-foot .btn { background: #171c22; color: #eef1f4; border-color: #333c46; }
+.mk-foot .btn.primary { background: #ff5b4f; border-color: #ff5b4f; color: #fff; }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 80; background: var(--ink); color: var(--sheet); padding: 10px 16px; border-radius: 8px; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+</style>
+
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <button class="brand" data-action="home" aria-label="Studio MBM field reports home">
+      <span id="logo-slot"></span>
+      <span class="div" aria-hidden="true"></span>
+      <span class="lbl">Field Reports</span>
+    </button>
+    <span class="spacer"></span>
+    <button class="btn primary" id="newBtn" data-action="new" hidden>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      New report
+    </button>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+  <div class="empty">
+    <h3>Loading field reports</h3>
+    <p>Connecting to Studio MBM's shared report log. Open items, reports, photos and markups will appear here.</p>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+// Studio MBM Field Reports: Supabase connection (login, reports, photos, live updates).
+// The app below talks to window.claude.use(...); this file answers those calls with Supabase.
+(() => {
+  'use strict';
+  const cfg = window.SMBM_CONFIG || {};
+  const configured = !!(cfg.supabaseUrl && cfg.supabaseAnonKey && !/YOUR[-_]/i.test(cfg.supabaseUrl + cfg.supabaseAnonKey));
+  const hashType = new URLSearchParams((location.hash || '').slice(1)).get('type');
+  const BUCKET = 'photos';
+  let sb = null, session = null, readyResolve, needPassword = false;
+  const ready = new Promise((r) => { readyResolve = r; });
+  const urlCache = new Map();   // storage path -> { url, exp }
+  const people = new Map();     // user id -> email
+  let reportCount = null;
+
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---------- photo links (private bucket, short-lived signed links) ----------
+  window.SMBM_blobUrl = (id) => { const c = urlCache.get(id); return c ? c.url : ''; };
+  async function signPaths(paths) {
+    const now = Date.now();
+    const need = [...new Set(paths.filter(Boolean))].filter((p) => !urlCache.has(p) || urlCache.get(p).exp - now < 30 * 60e3);
+    for (let i = 0; i < need.length; i += 100) {
+      const chunk = need.slice(i, i + 100);
+      const { data, error } = await sb.storage.from(BUCKET).createSignedUrls(chunk, 6 * 3600);
+      if (error || !data) { console.warn('Photo links failed', error); continue; }
+      data.forEach((d) => { if (d && d.signedUrl && !d.error) urlCache.set(d.path, { url: d.signedUrl, exp: now + 6 * 3600e3 }); });
+    }
+  }
+
+  // ---------- helpers ----------
+  const dbErr = (error) => ({
+    code: error && (error.code === '42501' || /row-level security|permission/i.test(error.message || '')) ? 'invalid_argument' : 'unavailable',
+    message: (error && error.message) || 'Request failed'
+  });
+  function deepMerge(base, patch) {
+    const out = { ...(base || {}) };
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      const cur = out[k];
+      out[k] = v && typeof v === 'object' && !Array.isArray(v) && cur && typeof cur === 'object' && !Array.isArray(cur) ? deepMerge(cur, v) : v;
+    });
+    return out;
+  }
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+  // ---------- reports ----------
+  const reportListeners = new Set();
+  let reportTimer = null;
+  async function fetchReports() {
+    const { data, error } = await sb.from('reports').select('id,data').order('created_at', { ascending: false }).limit(2000);
+    if (error) throw error;
+    const paths = [];
+    data.forEach((row) => {
+      const d = row.data || {};
+      if (d.author && d.authorEmail) people.set(d.author, d.authorEmail);
+      (d.items || []).forEach((i) => (i.photos || []).forEach((p) => { paths.push(p.id); if (p.original) paths.push(p.original); }));
+    });
+    await signPaths(paths);
+    reportCount = data.length; updateHeader();
+    return { docs: data.map((row) => ({ id: row.id, exists: true, data: () => row.data || {}, metadata: { fromCache: false, hasPendingWrites: false } })), size: data.length, empty: !data.length };
+  }
+  async function deliverReports() {
+    try { const snap = await fetchReports(); reportListeners.forEach((l) => l.next(snap)); }
+    catch (e) { console.warn('Loading reports failed', e); }
+  }
+  const scheduleReports = () => { clearTimeout(reportTimer); reportTimer = setTimeout(deliverReports, 200); };
+  function reportRef(id) {
+    return {
+      id, path: 'reports/' + id,
+      async get() {
+        const { data, error } = await sb.from('reports').select('id,data').eq('id', id).maybeSingle();
+        if (error) throw dbErr(error);
+        return { id, exists: !!data, data: () => (data ? data.data : undefined), metadata: {} };
+      },
+      async set(doc) {
+        const data = { ...doc };
+        if (data.author && data.author === session.user.id && !data.authorEmail) data.authorEmail = session.user.email;
+        const { error } = await sb.from('reports').upsert({ id, data });
+        if (error) throw dbErr(error);
+        scheduleReports();
+      },
+      async update(patch) {
+        const { data: row, error } = await sb.from('reports').select('data').eq('id', id).maybeSingle();
+        if (error) throw dbErr(error);
+        if (!row) throw { code: 'invalid_argument', message: 'Report not found' };
+        const { error: e2 } = await sb.from('reports').update({ data: deepMerge(row.data, patch) }).eq('id', id);
+        if (e2) throw dbErr(e2);
+        scheduleReports();
+      },
+      async delete() {
+        const { error } = await sb.from('reports').delete().eq('id', id);
+        if (error) throw dbErr(error);
+        scheduleReports();
+      }
+    };
+  }
+  const reportsQuery = {
+    onSnapshot(next, err) { const l = { next, err }; reportListeners.add(l); deliverReports(); return () => reportListeners.delete(l); }
+  };
+
+  // ---------- settings ----------
+  const settingsListeners = new Set();
+  async function fetchSettings(id) {
+    const { data, error } = await sb.from('settings').select('id,data').eq('id', id).maybeSingle();
+    if (error) throw dbErr(error);
+    return { id, exists: !!data, data: () => (data ? data.data : undefined), metadata: {} };
+  }
+  async function deliverSettings() { try { const s = await fetchSettings('app'); settingsListeners.forEach((l) => l(s)); } catch (e) { console.warn(e); } }
+  function settingsRef(id) {
+    return {
+      id, path: 'settings/' + id,
+      onSnapshot(next) { settingsListeners.add(next); fetchSettings(id).then(next).catch(() => {}); return () => settingsListeners.delete(next); },
+      get: () => fetchSettings(id),
+      async set(doc) { const { error } = await sb.from('settings').upsert({ id, data: doc }); if (error) throw dbErr(error); deliverSettings(); },
+      async update(patch) {
+        const cur = await fetchSettings(id);
+        const { error } = await sb.from('settings').upsert({ id, data: deepMerge(cur.exists ? cur.data() : {}, patch) });
+        if (error) throw dbErr(error);
+        deliverSettings();
+      }
+    };
+  }
+
+  const db = {
+    collection(name) {
+      if (name !== 'reports') throw new TypeError('Unknown collection ' + name);
+      return { orderBy: () => ({ limit: () => reportsQuery }), doc: (id) => reportRef(id || newId()) };
+    },
+    doc(path) { return settingsRef(String(path).split('/')[1] || 'app'); }
+  };
+
+  // ---------- photos & PDFs ----------
+  const assets = {
+    async upload(blob, opts) {
+      const type = (opts && opts.type) || blob.type || 'image/jpeg';
+      const ext = type === 'application/pdf' ? 'pdf' : type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
+      const d = new Date();
+      const path = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${newId()}.${ext}`;
+      const { error } = await sb.storage.from(BUCKET).upload(path, blob, { contentType: type, upsert: false });
+      if (error) {
+        const m = String(error.message || '');
+        throw { code: /size|large|exceed/i.test(m) ? 'too_large' : /mime|type/i.test(m) ? 'unsupported_type' : 'upstream_error', message: m };
+      }
+      await signPaths([path]);
+      return { id: path, url: window.SMBM_blobUrl(path), sizeBytes: blob.size, contentType: type };
+    },
+    async delete(id) { const { error } = await sb.storage.from(BUCKET).remove([id]); return { deleted: !error }; }
+  };
+
+  // ---------- people ----------
+  const user = {
+    id: async () => session.user.id,
+    isOwner: async () => false,
+    canEdit: async () => true,
+    can: async () => true,
+    name: async () => session.user.email,
+    async profiles(ids) {
+      const out = {};
+      [].concat(ids || []).forEach((i) => {
+        const me = i === session.user.id;
+        out[i] = { id: i, name: me ? session.user.email : (people.get(i) || ''), avatarUrl: '', color: '', email: null, isMe: me, guest: false };
+      });
+      return out;
+    }
+  };
+
+  // ---------- PDF downloads ----------
+  const downloads = {
+    async save({ filename, data }) {
+      const blob = data instanceof Blob ? data : new Blob([data]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      return { status: 'saved' };
+    }
+  };
+
+  window.claude = { use: async (name) => { await ready; return ({ db, user, assets, downloads })[name] || null; } };
+
+  // ---------- sign-in screen ----------
+  let panel = null;
+  function showPanel(mode, msg) {
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.className = 'overlay'; panel.id = 'auth'; panel.style.zIndex = 90; panel.style.background = 'var(--paper)';
+      document.body.appendChild(panel);
+      panel.addEventListener('submit', onSubmit);
+      panel.addEventListener('click', (e) => { const b = e.target.closest('[data-mode]'); if (b) { e.preventDefault(); showPanel(b.dataset.mode); } });
+    }
+    const logo = (document.getElementById('logo-slot') || {}).innerHTML || '';
+    const note = msg ? `<p class="${msg.err ? 'err' : 'muted'}" role="${msg.err ? 'alert' : 'status'}" style="margin:0;font-size:14px">${esc(msg.text)}</p>` : '';
+    const forms = {
+      setup: `<h4>Finish setup</h4><p>Open <b>config.js</b> in your GitHub repository and paste your Supabase Project URL and anon public key, then reload this page.</p>`,
+      signin: `<h4>Sign in</h4>
+        <form data-form="signin" style="display:grid;gap:12px">
+          <div class="fld"><label for="au-email">Email</label><input class="input" id="au-email" type="email" autocomplete="email" required></div>
+          <div class="fld"><label for="au-pw">Password</label><input class="input" id="au-pw" type="password" autocomplete="current-password" required></div>
+          ${note}
+          <button class="btn primary" type="submit">Sign in</button>
+          <button class="btn ghost" type="button" data-mode="forgot">Forgot password?</button>
+        </form>`,
+      forgot: `<h4>Reset password</h4>
+        <form data-form="forgot" style="display:grid;gap:12px">
+          <p style="margin:0">We'll email you a link to set a new password.</p>
+          <div class="fld"><label for="au-email2">Email</label><input class="input" id="au-email2" type="email" autocomplete="email" required></div>
+          ${note}
+          <button class="btn primary" type="submit">Send reset link</button>
+          <button class="btn ghost" type="button" data-mode="signin">Back to sign in</button>
+        </form>`,
+      setpw: `<h4>Set your password</h4>
+        <form data-form="setpw" style="display:grid;gap:12px">
+          <p style="margin:0">Signed in as ${esc(session && session.user.email)}. Choose a password for next time.</p>
+          <div class="fld"><label for="au-new">New password</label><input class="input" id="au-new" type="password" autocomplete="new-password" minlength="8" required></div>
+          ${note}
+          <button class="btn primary" type="submit">Save password</button>
+        </form>`
+    };
+    panel.innerHTML = `<div class="dialog" role="dialog" aria-modal="true" aria-label="Sign in">
+      <div style="color:var(--mbm);height:40px;display:flex">${logo.replace('<svg', '<svg style="height:40px;width:auto"')}</div>
+      <div class="eyebrow">Field Reports</div>
+      ${forms[mode]}
+    </div>`;
+    const first = panel.querySelector('input'); if (first) first.focus();
+  }
+  async function onSubmit(e) {
+    e.preventDefault();
+    const form = e.target.dataset.form, btn = e.target.querySelector('button[type="submit"]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Working…'; }
+    try {
+      if (form === 'signin') {
+        const { data, error } = await sb.auth.signInWithPassword({ email: panel.querySelector('#au-email').value.trim(), password: panel.querySelector('#au-pw').value });
+        if (error) return showPanel('signin', { err: true, text: 'Email or password is incorrect. Ask whoever manages Supabase to check your account.' });
+        session = data.session; enter();
+      } else if (form === 'forgot') {
+        const { error } = await sb.auth.resetPasswordForEmail(panel.querySelector('#au-email2').value.trim(), { redirectTo: location.origin + location.pathname });
+        showPanel('forgot', error ? { err: true, text: 'The email didn\'t send. Wait a few minutes and try again.' } : { text: 'Check your inbox for the reset link.' });
+      } else if (form === 'setpw') {
+        const { error } = await sb.auth.updateUser({ password: panel.querySelector('#au-new').value });
+        if (error) return showPanel('setpw', { err: true, text: error.message || 'That password wasn\'t accepted. Try a longer one.' });
+        needPassword = false; enter();
+      }
+    } catch (err) {
+      showPanel(form === 'forgot' ? 'forgot' : form, { err: true, text: 'Couldn\'t reach Supabase. Check your connection and the values in config.js.' });
+    }
+  }
+
+  // ---------- header: who is signed in, sign out, import ----------
+  function updateHeader() {
+    const bar = document.querySelector('.bar-in'); if (!bar || !session) return;
+    let box = document.getElementById('acct');
+    if (!box) {
+      box = document.createElement('div'); box.id = 'acct';
+      box.style.cssText = 'display:flex;align-items:center;gap:8px;min-width:0';
+      box.innerHTML = `<button class="btn sm" id="import-btn" hidden>Import report</button>
+        <span class="hint" id="acct-email" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <button class="btn sm ghost" id="signout-btn">Sign out</button>`;
+      const newBtn = document.getElementById('newBtn');
+      bar.insertBefore(box, newBtn);
+      box.querySelector('#signout-btn').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+      box.querySelector('#import-btn').addEventListener('click', importDialog);
+    }
+    box.querySelector('#acct-email').textContent = session.user.email || '';
+    box.querySelector('#import-btn').hidden = reportCount !== 0;
+  }
+
+  // ---------- one-time import of a report package (report.json + photos) ----------
+  function importDialog() {
+    const o = document.createElement('div'); o.className = 'overlay';
+    o.innerHTML = `<div class="dialog" role="dialog" aria-modal="true">
+      <h4>Import a report</h4>
+      <p>Select <b>all</b> the files in the import folder: <b>report.json</b> and every photo.</p>
+      <input type="file" id="imp-files" multiple accept=".json,image/*,application/pdf">
+      <p class="muted" id="imp-msg" style="margin:0;font-size:14px"></p>
+      <div class="actions"><button class="btn" data-x="close">Cancel</button><button class="btn primary" data-x="go">Import</button></div>
+    </div>`;
+    document.body.appendChild(o);
+    const msg = (t, err) => { const m = o.querySelector('#imp-msg'); m.textContent = t; m.className = err ? 'err' : 'muted'; };
+    o.addEventListener('click', async (e) => {
+      const x = e.target.closest('[data-x]'); if (!x) return;
+      if (x.dataset.x === 'close') return o.remove();
+      const files = Array.from(o.querySelector('#imp-files').files || []);
+      const jsonFile = files.find((f) => /\.json$/i.test(f.name));
+      if (!jsonFile) return msg('Include report.json in your selection.', true);
+      let pkg;
+      try { pkg = JSON.parse(await jsonFile.text()); } catch (err) { return msg('report.json couldn\'t be read.', true); }
+      if (!pkg || pkg.format !== 'smbm-field-report-import-v1' || !pkg.data) return msg('This isn\'t a field report import file.', true);
+      x.disabled = true;
+      const data = JSON.parse(JSON.stringify(pkg.data));
+      const photos = (data.items || []).flatMap((i) => i.photos || []);
+      let done = 0, missing = 0;
+      for (const it of data.items || []) {
+        const kept = [];
+        for (const p of it.photos || []) {
+          const f = files.find((ff) => ff.name === (p.importFile || p.name));
+          if (!f) { missing++; continue; }
+          msg(`Uploading photos (${++done} of ${photos.length})…`);
+          const type = /\.pdf$/i.test(f.name) ? 'application/pdf' : (f.type || 'image/jpeg');
+          const r = await assets.upload(f, { type });
+          const q = { ...p, id: r.id, size: r.sizeBytes }; delete q.importFile; delete q.original;
+          kept.push(q);
+        }
+        it.photos = kept;
+      }
+      data.author = session.user.id;
+      await reportRef(pkg.id || newId()).set(data);
+      o.remove();
+      alertBox(`Imported ${data.project || 'the report'} with ${done} photo${done === 1 ? '' : 's'}${missing ? `. ${missing} photo${missing === 1 ? ' was' : 's were'} not in your selection` : ''}.`);
+    });
+  }
+  function alertBox(text) {
+    const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = text;
+    document.body.appendChild(t); setTimeout(() => t.remove(), 5000);
+  }
+
+  // ---------- start ----------
+  let entered = false;
+  function enter() {
+    if (entered) return; entered = true;
+    if (panel) { panel.remove(); panel = null; }
+    if (location.hash && /access_token|type=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+    updateHeader();
+    sb.channel('smbm-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, scheduleReports)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => deliverSettings())
+      .subscribe();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleReports(); });
+    setInterval(scheduleReports, 20 * 60e3); // also refreshes photo links before they expire
+    readyResolve();
+  }
+  async function start() {
+    if (!configured || !window.supabase) return showPanel('setup');
+    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    sb.auth.onAuthStateChange((event, s) => { session = s || session; if (event === 'PASSWORD_RECOVERY') needPassword = true; });
+    const { data } = await sb.auth.getSession();
+    session = data.session;
+    if (!session) return showPanel('signin');
+    if (needPassword || hashType === 'invite' || hashType === 'recovery') return showPanel('setpw');
+    enter();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+</script>
+<script>
+(() => {
+  'use strict';
+
+  // ---------- firm constants ----------
+  const LOGO_VIEWBOX = '1 35 142 65';
+  const LOGO_PATHS = [
+    'M 1.597656 69.929688 L 4.378906 66.46875 C 5.769531 68.910156 7.871094 71.292969 10.621094 71.292969 C 12.582031 71.292969 13.914062 70.046875 13.914062 67.832031 C 13.914062 65.757812 12.15625 64.625 8.351562 62.949219 C 4.320312 61.191406 2.476562 59.460938 2.476562 56.734375 C 2.476562 52.902344 5.597656 50.320312 9.828125 50.320312 C 12.15625 50.320312 14.878906 50.886719 16.609375 51.9375 L 14.113281 55.488281 C 12.664062 53.300781 10.878906 51.511719 8.523438 51.511719 C 6.59375 51.511719 5.457031 52.875 5.457031 54.4375 C 5.457031 56.28125 6.820312 57.359375 10.679688 59.0625 C 14.792969 60.878906 17.179688 62.78125 17.179688 65.703125 C 17.179688 69.929688 13.773438 72.402344 9.429688 72.402344 C 6.875 72.402344 3.273438 71.605469 1.597656 69.929688',
+    'M 24.753906 51.796875 L 18.085938 51.796875 L 18.085938 50.71875 L 35.679688 50.71875 L 35.679688 51.796875 L 29.011719 51.796875 L 29.011719 72.003906 L 24.753906 72.003906 Z M 24.753906 51.796875',
+    'M 53.078125 64.285156 L 53.078125 50.71875 L 54.214844 50.71875 L 54.214844 64.140625 C 54.214844 68.683594 52.171875 72.457031 46.523438 72.457031 C 41.558594 72.457031 37.726562 70.015625 37.726562 64.085938 L 37.726562 50.71875 L 42.011719 50.71875 L 42.011719 64.285156 C 42.011719 69.222656 44.59375 71.265625 47.542969 71.265625 C 50.46875 71.265625 53.078125 69.164062 53.078125 64.285156',
+    'M 62.785156 51.769531 L 62.785156 70.953125 L 64.6875 70.953125 C 68.832031 70.953125 72.234375 67.632812 72.234375 61.898438 C 72.234375 55.484375 68.800781 51.738281 64.488281 51.769531 Z M 58.527344 50.71875 L 65.738281 50.71875 C 71.554688 50.71875 76.691406 54.351562 76.691406 60.964844 C 76.691406 67.546875 71.867188 72.003906 65.507812 72.003906 L 58.527344 72.003906 Z M 58.527344 50.71875',
+    'M 79.785156 50.71875 L 84.042969 50.71875 L 84.042969 72.003906 L 79.785156 72.003906 Z M 79.785156 50.71875',
+    'M 91.5625 59.488281 C 91.535156 66.128906 94.429688 71.324219 98.429688 71.324219 C 101.410156 71.324219 103.257812 68.34375 103.257812 63.234375 C 103.285156 56.59375 100.390625 51.398438 96.386719 51.398438 C 93.40625 51.398438 91.5625 54.378906 91.5625 59.488281 M 107.796875 61.191406 C 107.796875 67.691406 103.597656 72.402344 97.324219 72.402344 C 91.363281 72.402344 87.023438 67.546875 87.023438 61.53125 C 87.023438 55.03125 91.222656 50.320312 97.496094 50.320312 C 103.453125 50.320312 107.796875 55.171875 107.796875 61.191406',
+    'M 97.570312 99.425781 L 93.316406 99.425781 L 93.316406 82.78125 L 86.144531 99.425781 L 84.613281 99.425781 L 77.4375 82.894531 L 77.4375 99.425781 L 76.191406 99.425781 L 76.191406 78.15625 L 80.019531 78.15625 L 87.078125 94.375 L 94.054688 78.15625 L 97.570312 78.15625 Z M 97.570312 99.425781',
+    'M 106.363281 88.875 L 106.363281 98.375 L 108.175781 98.375 C 111.410156 98.375 112.855469 96.390625 112.855469 93.78125 C 112.855469 90.777344 110.925781 88.875 108.007812 88.875 Z M 106.363281 79.207031 L 106.363281 87.855469 L 107.78125 87.855469 C 110.558594 87.855469 112.289062 86.183594 112.289062 83.515625 C 112.289062 80.59375 110.445312 79.207031 107.75 79.207031 Z M 102.109375 78.15625 L 109.792969 78.15625 C 113.960938 78.15625 116.769531 80.085938 116.769531 83.261719 C 116.769531 85.699219 114.726562 87.742188 111.324219 88.195312 C 115.066406 88.507812 117.476562 90.691406 117.476562 93.527344 C 117.476562 96.703125 115.179688 99.425781 109.992188 99.425781 L 102.109375 99.425781 Z M 102.109375 78.15625',
+    'M 142.007812 99.425781 L 137.753906 99.425781 L 137.753906 82.78125 L 130.578125 99.425781 L 129.046875 99.425781 L 121.875 82.894531 L 121.875 99.425781 L 120.625 99.425781 L 120.625 78.15625 L 124.453125 78.15625 L 131.515625 94.375 L 138.492188 78.15625 L 142.007812 78.15625 Z M 142.007812 99.425781',
+    'M 142.402344 44.769531 C 142.402344 49.835938 138.296875 53.941406 133.230469 53.941406 C 128.167969 53.941406 124.058594 49.835938 124.058594 44.769531 C 124.058594 39.707031 128.167969 35.597656 133.230469 35.597656 C 138.296875 35.597656 142.402344 39.707031 142.402344 44.769531'
+  ];
+  const logoSvg = (fill, attrs) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${LOGO_VIEWBOX}" ${attrs || ''}>${LOGO_PATHS.map(d => `<path fill="${fill}" d="${d} Z"/>`).join('')}</svg>`;
+  document.getElementById('logo-slot').innerHTML = logoSvg('currentColor', 'role="img" aria-label="Studio MBM"');
+
+  const DISCLAIMER = 'Field Reports are prepared to document conditions and observations made during the Designer’s site visits. The observations recorded herein are not intended to identify all deficiencies, deviations, or nonconforming work, nor do they relieve the Contractor of its obligations under the Contract Documents. The report does not establish a construction schedule, sequence, or priority of corrective action. The Contractor remains solely responsible for the proper execution, coordination, and completion of the Work in accordance with the Contract Documents and applicable codes.';
+  const STATUS = { open: 'Open', pending: 'Pending', closed: 'Closed' };
+  const DEFAULT_PARTIES = ['GC', 'SMBM', 'Owner', 'Electrician', 'Plumber', 'Millwork'];
+  const MAX_EDGE = 2400;
+  const DRAFT_KEY = 'smbm-draft-v2';
+  const FILTER_KEY = 'smbm-filters-v2';
+  const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  // ---------- state ----------
+  const S = {
+    db: null, user: null, assets: null, downloads: null, uid: null,
+    canWrite: true, isEditor: false, ready: false, dbMissing: false,
+    reports: [], current: new Map(), parties: DEFAULT_PARTIES.slice(), partiesByProject: {}, fieldsByProject: {}, view: 'dash', tab: 'items', currentId: null,
+    draft: null, editingId: null, sessionUploads: new Set(), pending: [], carryInfo: null, lb: {},
+    itf: { status: 'open', project: '', resp: '', critical: false, q: '', cf: {} },
+    rf: { project: '', q: '' }
+  };
+  try { const f = JSON.parse(localStorage.getItem(FILTER_KEY) || 'null'); if (f) { Object.assign(S.itf, f.itf || {}); Object.assign(S.rf, f.rf || {}); if (f.tab) S.tab = f.tab; } } catch (e) {}
+  if (/^#(items|reports)$/.test(location.hash)) S.tab = location.hash.slice(1);
+  if (!S.itf.cf || typeof S.itf.cf !== 'object') S.itf.cf = {};
+
+  const app = document.getElementById('app');
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const uid8 = () => Math.random().toString(36).slice(2, 10);
+  const newKey = () => uid8() + uid8();
+  const blobUrl = (id) => window.SMBM_blobUrl(id);
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+  const parseDate = (iso) => new Date((iso || todayISO()) + 'T12:00:00');
+  const mdy = (iso) => { const d = parseDate(iso); return pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + '/' + d.getFullYear(); };
+  const longDate = (iso) => parseDate(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const fmtStamp = (ms) => ms ? new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  const fmtSize = (b) => !b ? '' : b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+  const normStatus = (s) => s === 'progress' ? 'pending' : (STATUS[s] ? s : 'open');
+  const reportTitle = (r) => mdy(r.reportDate) + ' Field Report';
+  const richHTML = (t) => esc(t || '').replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
+  const plain = (t) => String(t || '').replace(/\*\*/g, '');
+  const sortKey = (r) => (r.reportDate || '') + '|' + String(r.createdAt || 0).padStart(15, '0');
+
+  function toast(msg) {
+    const old = $('.toast'); if (old) old.remove();
+    const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+    document.body.appendChild(t); setTimeout(() => t.remove(), 3400);
+  }
+  function confirmBox(title, body, okLabel) {
+    return new Promise((resolve) => {
+      const o = document.createElement('div'); o.className = 'overlay';
+      o.innerHTML = `<div class="dialog" role="dialog" aria-modal="true"><h4>${esc(title)}</h4><p>${esc(body)}</p><div class="actions"><button class="btn" data-x="no">Cancel</button><button class="btn primary" data-x="yes">${esc(okLabel)}</button></div></div>`;
+      const done = (v) => { o.remove(); document.removeEventListener('keydown', onKey); resolve(v); };
+      const onKey = (e) => { if (e.key === 'Escape') done(false); };
+      o.addEventListener('click', (e) => { const x = e.target.closest('[data-x]'); if (x) done(x.dataset.x === 'yes'); else if (e.target === o) done(false); });
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(o); $('[data-x="yes"]', o).focus();
+    });
+  }
+  function persistFilters() { try { localStorage.setItem(FILTER_KEY, JSON.stringify({ itf: S.itf, rf: S.rf, tab: S.tab })); } catch (e) {} }
+
+  async function paintNames(root = document) {
+    const els = $$('[data-uid]', root); if (!els.length) return;
+    const ids = [...new Set(els.map(e => e.dataset.uid).filter(Boolean))];
+    let ps = {};
+    if (S.user && ids.length) { try { ps = await S.user.profiles(ids); } catch (e) {} }
+    els.forEach(el => { const p = ps[el.dataset.uid]; el.textContent = (p && p.name) || (el.dataset.uid === S.uid ? 'You' : 'A colleague'); });
+  }
+
+  // ---------- derived data ----------
+  function derive() {
+    const asc = [...S.reports].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+    const cur = new Map();
+    asc.forEach(r => (r.items || []).forEach(it => { if (it.key) cur.set(it.key, { item: it, report: r }); }));
+    S.current = cur;
+    S.reports.sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
+  }
+  const projectNames = () => [...new Set(S.reports.map(r => r.project).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const partiesFor = (project) => (project && Array.isArray(S.partiesByProject[project]) ? S.partiesByProject[project] : S.parties);
+  const respNames = () => [...new Set([...(S.itf.project ? partiesFor(S.itf.project) : [S.parties, ...Object.values(S.partiesByProject)].flat()), ...[...S.current.values()].filter(c => !S.itf.project || c.report.project === S.itf.project).map(c => (c.item.responsible || '').trim())].filter(Boolean))];
+  // Custom columns are defined per project: [{id, name, type: 'list'|'text', options: []}]; item values live in item.fields[id].
+  const fieldsFor = (project) => (project && Array.isArray(S.fieldsByProject[project]) ? S.fieldsByProject[project] : []);
+  const fieldVal = (item, f) => ((item.fields || {})[f.id] || '');
+  // Columns shown on the dashboard: the selected project's, or every project's merged by column name.
+  function dashFields() {
+    if (S.itf.project) return fieldsFor(S.itf.project).map(f => ({ name: f.name, options: f.type === 'list' ? f.options.slice() : [] }));
+    const byName = new Map();
+    Object.values(S.fieldsByProject).forEach(list => (list || []).forEach(f => {
+      const e = byName.get(f.name) || { name: f.name, options: [] };
+      (f.options || []).forEach(o => { if (!e.options.includes(o)) e.options.push(o); });
+      byName.set(f.name, e);
+    }));
+    return [...byName.values()];
+  }
+  const valueByName = (report, item, name) => { const f = fieldsFor(report.project).find(x => x.name === name); return f ? fieldVal(item, f) : ''; };
+  async function saveSettings(patch) {
+    const ref = S.db.doc('settings/app');
+    const snap = await ref.get();
+    if (snap.exists) await ref.update({ ...patch, updatedAt: Date.now(), updatedBy: S.uid });
+    else await ref.set({ parties: S.parties, projectParties: S.partiesByProject, projectFields: S.fieldsByProject, ...patch, updatedAt: Date.now(), updatedBy: S.uid });
+  }
+  const partyOptions = (cur, project) => {
+    const list = partiesFor(project).slice(); if (cur && !list.includes(cur)) list.push(cur);
+    return `<option value="">Not assigned</option>` + list.map(p => `<option ${p === cur ? 'selected' : ''}>${esc(p)}</option>`).join('');
+  };
+  const isLatestFor = (reportId, key) => { const c = S.current.get(key); return !!c && c.report.id === reportId; };
+  const latestReportFor = (project, excludeId) => S.reports.find(r => r.project === project && r.id !== excludeId) || null;
+  const itemCounts = (r) => { const c = { open: 0, pending: 0, closed: 0 }; (r.items || []).forEach(i => c[normStatus(i.status)]++); return c; };
+
+  // ---------- routing ----------
+  function go(view, id) {
+    S.view = view; S.currentId = id || null;
+    $('#newBtn').hidden = !(S.ready && S.canWrite && view !== 'form');
+    render(); window.scrollTo(0, 0);
+  }
+  function render() {
+    S.lb = {};
+    if (S.view === 'detail') return renderDetail();
+    if (S.view === 'form') return renderForm();
+    return renderDash();
+  }
+
+  // ---------- dashboard ----------
+  function renderDash() {
+    if (S.dbMissing) { app.innerHTML = `<div class="empty"><h3>Can't reach the report database</h3><p>Reload the page. If this keeps happening, check the values in config.js.</p></div>`; return; }
+    if (!S.ready) return;
+    const allItems = [...S.current.values()];
+    app.innerHTML = `
+      <div class="eyebrow">Studio MBM</div>
+      <h2 class="view-title">Field report dashboard</h2>
+      ${S.canWrite ? '' : '<div class="notice" style="margin-top:12px">You can read reports here. Ask the page owner for Contributor access to file your own.</div>'}
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-action="tab" data-tab="items" aria-selected="${S.tab === 'items'}">Items<span class="n">${allItems.length}</span></button>
+        <button class="tab" role="tab" data-action="tab" data-tab="reports" aria-selected="${S.tab === 'reports'}">Reports<span class="n">${S.reports.length}</span></button>
+      </div>
+      <div id="tabbody"></div>`;
+    if (S.tab === 'reports') renderReportsTab(); else renderItemsTab();
+  }
+
+  function filteredItems(ignoreStatus) {
+    const f = S.itf, q = f.q.trim().toLowerCase();
+    return [...S.current.values()].filter(({ item, report }) => {
+      const st = normStatus(item.status);
+      if (!ignoreStatus && f.status !== 'all' && st !== f.status) return false;
+      if (f.project && report.project !== f.project) return false;
+      if (f.resp && (item.responsible || '').trim() !== f.resp) return false;
+      if (f.critical && !item.critical) return false;
+      for (const [name, want] of Object.entries(f.cf || {})) { if (want && valueByName(report, item, name) !== want) return false; }
+      if (!q) return true;
+      return [item.title, item.desc, item.note, item.responsible, report.project, report.projectNo, ...Object.values(item.fields || {}), ...(item.updates || []).map(u => u.note)].join(' ').toLowerCase().includes(q);
+    }).sort((a, b) => (a.report.project || '').localeCompare(b.report.project || '') || (a.item.num || 999) - (b.item.num || 999));
+  }
+
+  function renderItemsTab() {
+    const box = $('#tabbody');
+    if (!S.reports.length) {
+      box.innerHTML = `<div class="empty"><h3>No reports filed yet</h3><p>Each site meeting becomes one field report. Its items appear here, and open and pending items carry into the next report for that project.</p>${S.canWrite ? '<button class="btn primary" data-action="new">File the first report</button>' : ''}</div>`;
+      return;
+    }
+    const projects = projectNames(), resps = respNames();
+    if (S.itf.project && !projects.includes(S.itf.project)) S.itf.project = '';
+    if (S.itf.resp && !resps.includes(S.itf.resp)) S.itf.resp = '';
+    const dfs = dashFields();
+    Object.keys(S.itf.cf).forEach(n => { if (!dfs.some(f => f.name === n)) delete S.itf.cf[n]; });
+    const base = filteredItems(true);
+    const cnt = { open: 0, pending: 0, closed: 0 }; base.forEach(c => cnt[normStatus(c.item.status)]++);
+    const list = filteredItems(false);
+    const cols = `52px minmax(0, 1fr) ${dfs.map(() => '110px ').join('')}150px 110px 100px 112px`;
+    const chip = (k, label, n) => `<button class="chip ${k}" data-action="ifstatus" data-st="${k}" aria-pressed="${S.itf.status === k}"><span class="k">${label}</span><span class="v">${n}</span></button>`;
+    box.innerHTML = `
+      <div class="chips">${chip('open', 'Open', cnt.open)}${chip('pending', 'Pending', cnt.pending)}${chip('closed', 'Closed', cnt.closed)}${chip('all', 'All items', base.length)}</div>
+      <div class="toolbar">
+        <input class="input search" id="if-q" type="search" placeholder="Search items, locations, updates…" value="${esc(S.itf.q)}" aria-label="Search items">
+        <select class="input" id="if-project" aria-label="Filter by project"><option value="">All projects</option>${projects.map(p => `<option ${p === S.itf.project ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>
+        <select class="input" id="if-resp" aria-label="Filter by responsible party"><option value="">Anyone responsible</option>${resps.map(p => `<option ${p === S.itf.resp ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>
+        ${dfs.map((f, i) => f.options.length
+          ? `<select class="input" id="if-cf-${i}" data-cf-filter="${esc(f.name)}" aria-label="Filter by ${esc(f.name)}"><option value="">Any ${esc(f.name.toLowerCase())}</option>${f.options.map(o => `<option ${S.itf.cf[f.name] === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`
+          : '').join('')}
+        <label class="check"><input type="checkbox" id="if-crit" ${S.itf.critical ? 'checked' : ''}> Critical only</label>
+      </div>
+      ${S.canWrite ? `<div class="toolbar" style="margin-top:-4px">
+        <span class="hint">Click an item to edit it, or change a dropdown right in the list.</span>
+        <span style="flex:1"></span>
+        ${S.itf.project ? `<button class="btn sm" data-action="columns" data-project="${esc(S.itf.project)}">Edit columns for ${esc(S.itf.project)}</button>` : '<span class="hint">Pick a project to add or remove its columns.</span>'}
+      </div>` : ''}
+      ${list.length ? `<div class="trk" style="--trk-cols: ${cols}">
+        <div class="trk-head"><span>#</span><span>Item</span>${dfs.map(f => `<span>${esc(f.name)}</span>`).join('')}<span>Project</span><span>Responsible</span><span>Last report</span><span>Status</span></div>
+        ${list.map(c => trkRow(c, dfs)).join('')}
+      </div>` : `<div class="empty"><h3>No items here</h3><p>No ${S.itf.status === 'all' ? '' : esc(STATUS[S.itf.status] ? STATUS[S.itf.status].toLowerCase() + ' ' : '')}items match these filters.</p></div>`}`;
+  }
+
+  function trkRow({ item, report }, dfs) {
+    const st = normStatus(item.status);
+    const lastUpd = item.note ? { date: report.visitDate || report.reportDate, note: item.note } : (item.updates || []).slice(-1)[0];
+    return `<div class="trk-row" role="button" tabindex="0" data-action="item" data-key="${esc(item.key)}">
+      <span class="trk-num">${item.num ? pad2(item.num) : '—'}</span>
+      <div class="c-main" style="min-width:0">
+        <div class="trk-title">${esc(item.title || 'Untitled item')} ${item.critical ? '<span class="pill crit">Critical</span>' : ''}</div>
+        <div class="trk-desc ${item.critical ? 'crit' : ''}">${esc(plain(item.desc))}</div>
+        ${lastUpd && lastUpd.note ? `<div class="trk-upd"><b>${esc(mdy(lastUpd.date))}</b> ${esc(plain(lastUpd.note))}</div>` : ''}
+      </div>
+      ${(dfs || []).map(df => {
+        const f = fieldsFor(report.project).find(x => x.name === df.name), v = f ? fieldVal(item, f) : '';
+        return `<div class="trk-cell c-cf"><span class="trk-lbl">${esc(df.name)}</span>${S.canWrite && f && f.type === 'list' ? cellSelect(report.id, item.key, f, v) : esc(v || '—')}</div>`;
+      }).join('')}
+      <div class="trk-cell c-proj">${esc(report.project)}${report.projectNo ? `<small>${esc(report.projectNo)}</small>` : ''}</div>
+      <div class="trk-cell c-resp"><span class="trk-lbl">Responsible</span>${S.canWrite ? `<select class="cell-sel ${item.responsible ? '' : 'unset'}" data-resp-for="${esc(item.key)}" data-report="${esc(report.id)}" aria-label="Responsible party">${partyOptions(item.responsible || '', report.project).replace('Not assigned', '—')}</select>` : esc(item.responsible || '—')}</div>
+      <div class="trk-cell c-last"><span class="trk-lbl">Last report</span><span class="mono">${esc(mdy(report.reportDate))}</span></div>
+      <div class="c-status">${statusControl(report.id, item.key, st, true)}</div>
+    </div>`;
+  }
+
+  function cellSelect(reportId, key, f, v) {
+    const opts = [...f.options, ...(v && !f.options.includes(v) ? [v] : [])];
+    return `<select class="cell-sel ${v ? '' : 'unset'}" data-cf-set="${esc(f.id)}" data-cf-name="${esc(f.name)}" data-key="${esc(key)}" data-report="${esc(reportId)}" aria-label="${esc(f.name)}"><option value="">—</option>${opts.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  }
+  function statusControl(reportId, key, st, latest) {
+    if (S.canWrite && latest) return `<select class="status-sel ${st}" data-status-for="${esc(key)}" data-report="${esc(reportId)}" aria-label="Item status">${Object.entries(STATUS).map(([v, l]) => `<option value="${v}" ${v === st ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+    return `<span class="pill ${st}">${STATUS[st]}</span>`;
+  }
+
+  function renderReportsTab() {
+    const box = $('#tabbody');
+    const projects = projectNames();
+    if (S.rf.project && !projects.includes(S.rf.project)) S.rf.project = '';
+    const q = S.rf.q.trim().toLowerCase();
+    const list = S.reports.filter(r => (!S.rf.project || r.project === S.rf.project) && (!q || [r.project, r.projectNo, reportTitle(r), ...(r.items || []).map(i => i.title + ' ' + i.desc + ' ' + (i.note || ''))].join(' ').toLowerCase().includes(q)));
+    box.innerHTML = `
+      <div class="toolbar">
+        <input class="input search" id="rf-q" type="search" placeholder="Search reports…" value="${esc(S.rf.q)}" aria-label="Search reports">
+        <select class="input" id="rf-project" aria-label="Filter by project"><option value="">All projects</option>${projects.map(p => `<option ${p === S.rf.project ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>
+      </div>
+      ${!S.reports.length ? `<div class="empty"><h3>No reports filed yet</h3><p>File a report after each site meeting.</p>${S.canWrite ? '<button class="btn primary" data-action="new">File the first report</button>' : ''}</div>`
+        : !list.length ? `<div class="empty"><h3>No matching reports</h3><p>Nothing matches these filters.</p></div>`
+        : `<div class="rows">${list.map(reportRow).join('')}</div>`}`;
+    paintNames(box);
+  }
+
+  function reportRow(r) {
+    const d = parseDate(r.visitDate || r.reportDate), c = itemCounts(r);
+    const nPh = (r.items || []).reduce((n, i) => n + (i.photos || []).length, 0);
+    return `<button class="row" data-action="open" data-id="${esc(r.id)}">
+      <div class="datecell"><div class="m">${d.toLocaleDateString('en-US', { month: 'short' })}</div><div class="d">${d.getDate()}</div><div class="y">${d.getFullYear()}</div></div>
+      <div class="row-main">
+        <div class="row-proj">${esc(r.project || 'Untitled project')}</div>
+        <div class="row-meta">${esc(reportTitle(r))}${r.projectNo ? ' · ' + esc(r.projectNo) : ''}${r.revision && r.revision !== 'n/a' ? ' · Rev ' + esc(r.revision) : ''} · <span data-uid="${esc(r.author || '')}">…</span>${nPh ? ` · ${nPh} photo${nPh > 1 ? 's' : ''}` : ''}</div>
+      </div>
+      <div class="row-side">${c.open ? `<span class="pill open">${c.open} open</span>` : ''}${c.pending ? `<span class="pill pending">${c.pending} pending</span>` : ''}${c.closed ? `<span class="pill closed">${c.closed} closed</span>` : ''}${!(r.items || []).length ? '<span class="pill none">No items</span>' : ''}</div>
+    </button>`;
+  }
+
+  // ---------- item history overlay ----------
+  function itemOverlay(key) {
+    const c = S.current.get(key); if (!c) return;
+    if (S.canWrite) return itemEditor(c);
+    const { item, report } = c, st = normStatus(item.status);
+    const entries = [...(item.updates || []).map(u => ({ date: u.date, note: u.note, status: u.status, reportId: u.reportId }))];
+    if (item.note) entries.push({ date: report.visitDate || report.reportDate, note: item.note, status: st, reportId: report.id });
+    const lbKey = 'ov-' + key; S.lb[lbKey] = (item.photos || []).filter(p => p.kind !== 'pdf');
+    const fs = fieldsFor(report.project).filter(f => fieldVal(item, f));
+    const o = document.createElement('div'); o.className = 'overlay';
+    o.innerHTML = `<div class="dialog wide" role="dialog" aria-modal="true">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+        <div><div class="eyebrow">${esc(report.project)}${report.projectNo ? ' · ' + esc(report.projectNo) : ''}</div><h4>Item ${item.num ? pad2(item.num) : ''} · ${esc(item.title || 'Untitled')}</h4></div>
+        <div style="display:flex;gap:8px;align-items:center">${item.critical ? '<span class="pill crit">Critical</span>' : ''}<span class="pill ${st}">${STATUS[st]}</span></div>
+      </div>
+      <div class="it-desc ${item.critical ? 'crit-text' : ''}">${richHTML(item.desc)}</div>
+      ${item.responsible || fs.length ? `<div class="muted" style="font-size:14px">${[item.responsible ? 'Responsible: ' + esc(item.responsible) : '', ...fs.map(f => esc(f.name) + ': ' + esc(fieldVal(item, f)))].filter(Boolean).join(' · ')}</div>` : ''}
+      <div><div class="eyebrow" style="margin-bottom:4px">Updates</div>
+        ${entries.length ? `<div class="tl">${entries.slice().reverse().map(e => `<div class="tl-e"><div class="d">${esc(mdy(e.date))}<br>${e.status ? `<span class="pill ${normStatus(e.status)}" style="margin-top:4px">${STATUS[normStatus(e.status)]}</span>` : ''}</div><div class="t">${richHTML(e.note)}</div></div>`).join('')}</div>` : '<p class="muted" style="margin:0;font-size:14px">No updates since the item was logged.</p>'}
+      </div>
+      ${(item.photos || []).length ? `<div><div class="eyebrow" style="margin-bottom:4px">Photos &amp; markups</div>${photosHTML(item.photos, lbKey)}</div>` : ''}
+      <div class="actions"><button class="btn" data-x="report">Open latest report (${esc(mdy(report.reportDate))})</button><button class="btn primary" data-x="close">Close</button></div>
+    </div>`;
+    const close = () => { if (!o.isConnected) return; o.remove(); document.removeEventListener('keydown', onKey); if (S.view !== 'form') render(); };
+    const onKey = (e) => { if (e.key === 'Escape' && !$('.lb')) close(); };
+    o.addEventListener('click', (e) => {
+      const x = e.target.closest('[data-x]');
+      if (x) { close(); if (x.dataset.x === 'report') go('detail', report.id); }
+      else if (e.target === o) close();
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(o);
+  }
+
+  // Edit an item where it currently lives (its latest report) without opening the whole report.
+  function itemEditor({ item, report }) {
+    const copy = JSON.parse(JSON.stringify(item));
+    Object.assign(copy, { status: normStatus(copy.status), fields: copy.fields || {}, photos: copy.photos || [], updates: copy.updates || [], note: copy.note || '', carried: true });
+    S.itemEdit = { item: copy, reportId: report.id }; S.sessionUploads = new Set();
+    const o = document.createElement('div'); o.className = 'overlay';
+    o.innerHTML = `<div class="dialog wide" role="dialog" aria-modal="true" aria-label="Edit item">
+      <div><div class="eyebrow">${esc(report.project)}${report.projectNo ? ' · ' + esc(report.projectNo) : ''} · latest report ${esc(mdy(report.reportDate))}</div><h4>Edit item${item.num ? ' ' + pad2(item.num) : ''}</h4></div>
+      ${itemCardHTML(copy, { project: report.project, overlay: true, noteLabel: `Update in the ${mdy(report.reportDate)} report` })}
+      <div class="actions" style="justify-content:space-between">
+        <button class="btn ghost" data-x="report">Open latest report</button>
+        <span style="display:flex;gap:8px"><button class="btn" data-x="cancel">Cancel</button><button class="btn primary" data-x="save">Save changes</button></span>
+      </div>
+    </div>`;
+    const close = async (discard) => {
+      if (!o.isConnected) return;
+      if (discard) discardUploads([...S.sessionUploads]);
+      o.remove(); document.removeEventListener('keydown', onKey);
+      S.itemEdit = null; S.sessionUploads = new Set();
+      if (S.view !== 'form') render();
+    };
+    const onKey = (e) => { if (e.key === 'Escape' && !$('.lb') && !$('.mk') && o === $$('.overlay').pop()) close(true); };
+    o.addEventListener('click', async (e) => {
+      const x = e.target.closest('[data-x]'); if (!x || !o.contains(x)) return;
+      if (x.dataset.x === 'cancel') close(true);
+      else if (x.dataset.x === 'report') { close(true); go('detail', report.id); }
+      else if (x.dataset.x === 'save') {
+        if (S.pending.some(p => p.key === copy.key)) { toast('Wait for uploads to finish.'); return; }
+        x.disabled = true; x.textContent = 'Saving…';
+        const photos = copy.photos.map(p => { const q = { id: p.id, kind: p.kind || 'image', name: p.name || '', caption: (p.caption || '').trim(), size: p.size || 0 }; if (p.original) q.original = p.original; return q; });
+        const fields = Object.fromEntries(Object.entries(copy.fields || {}).filter(([, v]) => typeof v === 'string' && v.trim()).map(([k, v]) => [k, v.trim()]));
+        const ok = await updateItem(report.id, copy.key, {
+          title: (copy.title || '').trim(), desc: (copy.desc || '').trim(), critical: !!copy.critical, responsible: (copy.responsible || '').trim(),
+          status: normStatus(copy.status), note: (copy.note || '').trim(), fields, photos
+        }, 'Item saved');
+        if (!ok) { x.disabled = false; x.textContent = 'Save changes'; return; }
+        const kept = new Set(); photos.forEach(p => { kept.add(p.id); if (p.original) kept.add(p.original); });
+        discardUploads([...S.sessionUploads].filter(id => !kept.has(id)));
+        S.sessionUploads = new Set();
+        close(false);
+      }
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(o);
+    const t = $('input[data-f="title"]', o); if (t) t.focus();
+  }
+
+  function photosHTML(list, lbKey) {
+    const imgs = list.filter(p => p.kind !== 'pdf'), docs = list.filter(p => p.kind === 'pdf');
+    return `<div class="it-photos">${imgs.map((p, k) => `<div class="it-ph">${p.caption ? `<span class="lab">${esc(p.caption)}</span>` : ''}<button data-action="lightbox" data-lb="${esc(lbKey)}" data-k="${k}" aria-label="Open photo">${p.original ? '<span class="tag">Marked up</span>' : ''}<img src="${blobUrl(p.id)}" alt="${esc(p.caption || 'Item photo')}" loading="lazy" onerror="this.style.visibility='hidden'"></button></div>`).join('')}
+      ${docs.map(p => `<a class="it-pdf" href="${blobUrl(p.id)}" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l5 5v13H7z" stroke="currentColor" stroke-width="1.8"/></svg>${esc(p.caption || p.name || 'Document')}</a>`).join('')}</div>`;
+  }
+
+  // ---------- report detail ----------
+  function renderDetail() {
+    const r = S.reports.find(x => x.id === S.currentId);
+    if (!r) { app.innerHTML = `<button class="btn ghost back" data-action="home">← Dashboard</button><div class="empty"><h3>Report not found</h3><p>It may have been deleted by a colleague.</p></div>`; return; }
+    const items = (r.items || []).slice().sort((a, b) => (a.num || 999) - (b.num || 999));
+    const rfs = fieldsFor(r.project);
+    const mine = S.canWrite && (S.isEditor || !r.author || r.author === S.uid);
+    app.innerHTML = `
+      <button class="btn ghost back" data-action="home">← Dashboard</button>
+      <article class="sheet">
+        <div class="sheet-run"><span>Studio MBM</span><span>${esc(mdy(r.reportDate))}</span></div>
+        <h2>${esc(reportTitle(r))}</h2>
+        <dl class="kv">
+          <dt>Project</dt><dd>${esc(r.project)}${r.projectNo ? ` <span class="muted mono" style="font-size:13px">${esc(r.projectNo)}</span>` : ''}</dd>
+          <dt>Date</dt><dd>${esc(longDate(r.reportDate))}</dd>
+          <dt>Site Meeting</dt><dd>${esc(longDate(r.visitDate || r.reportDate))}</dd>
+          <dt>Revision</dt><dd>${esc(r.revision || 'n/a')}</dd>
+        </dl>
+        <p class="disclaim">${esc(DISCLAIMER)}</p>
+        <div class="legend"><p>Items requiring correction/action in the field are in <strong>bold</strong>.</p><p>Critical items are in <strong class="crit-text">red</strong>.</p><p>Items from previous Field Reports marked CLOSED are removed from subsequent Field Reports.</p></div>
+        ${items.length ? `<div class="rtable-wrap"><table class="rtable"><thead><tr><th>#</th><th>Status</th>${rfs.map(f => `<th class="cf">${esc(f.name)}</th>`).join('')}<th>Date/Description/Photo</th></tr></thead><tbody>
+          ${items.map(it => {
+            const st = normStatus(it.status), latest = isLatestFor(r.id, it.key), later = S.current.get(it.key);
+            const lbKey = 'r-' + it.key; S.lb[lbKey] = (it.photos || []).filter(p => p.kind !== 'pdf');
+            return `<tr><td class="n">${it.num || ''}</td><td class="s">${statusControl(r.id, it.key, st, latest)}${!latest && later ? `<div class="later">Now ${esc(STATUS[normStatus(later.item.status)].toLowerCase())} in <button data-action="open" data-id="${esc(later.report.id)}">${esc(mdy(later.report.reportDate))}</button></div>` : ''}</td>
+              ${rfs.map(f => `<td class="cf">${S.canWrite && latest && f.type === 'list' ? cellSelect(r.id, it.key, f, fieldVal(it, f)) : esc(fieldVal(it, f))}</td>`).join('')}
+              <td><div class="it-title">${esc(it.title || '')}</div>
+                <div class="it-desc ${it.critical ? 'crit-text' : ''}">${richHTML(it.desc)}</div>
+                ${(it.updates || []).filter(u => u.note).map(u => `<div class="it-upd ${it.critical ? 'crit-text' : ''}"><span class="dt">${esc(mdy(u.date))}</span>${richHTML(u.note)}</div>`).join('')}
+                ${it.note ? `<div class="it-upd ${it.critical ? 'crit-text' : ''}"><span class="dt">${esc(mdy(r.visitDate || r.reportDate))}</span>${richHTML(it.note)}</div>` : ''}
+                ${it.responsible ? `<div class="muted" style="font-size:12px;margin-top:4px">Responsible: ${esc(it.responsible)}</div>` : ''}
+                ${(it.photos || []).length ? photosHTML(it.photos, lbKey) : ''}
+              </td></tr>`;
+          }).join('')}
+        </tbody></table></div>` : '<p class="muted">No items in this report.</p>'}
+        <p class="muted" style="font-size:13px;margin:16px 0 0">${r.importedFrom ? `Imported from ${esc(r.importedFrom)}` : `Filed by <span data-uid="${esc(r.author || '')}">…</span>`} · ${esc(fmtStamp(r.createdAt))}${r.updatedAt && r.updatedAt - r.createdAt > 60000 ? ` · Last edited ${esc(fmtStamp(r.updatedAt))}` : ''}</p>
+      </article>
+      <div class="actions">
+        <button class="btn primary" data-action="pdf">Download PDF</button>
+        ${mine ? '<button class="btn" data-action="edit">Edit report</button>' : ''}
+        ${S.canWrite ? '<button class="btn" data-action="next">Start next report</button>' : ''}
+        <button class="btn" data-action="copy">Copy as text</button>
+        ${mine ? '<button class="btn red" data-action="delete">Delete</button>' : ''}
+      </div>`;
+    paintNames(app);
+  }
+
+  async function updateItem(reportId, key, patch, msg) {
+    const r = S.reports.find(x => x.id === reportId); if (!r) return;
+    const items = (r.items || []).map(i => i.key === key ? { ...i, ...patch } : { ...i });
+    try { await S.db.collection('reports').doc(r.id).update({ items, updatedAt: Date.now(), updatedBy: S.uid }); toast(msg); return true; }
+    catch (e) { writeError(e); if (!document.querySelector('.overlay')) render(); return false; }
+  }
+  const setItemStatus = (reportId, key, status) => updateItem(reportId, key, { status }, 'Item marked ' + STATUS[status].toLowerCase());
+
+  // Per-project custom columns: add, rename, reorder, delete; list columns keep their options.
+  function columnsDialog(project) {
+    const rows = fieldsFor(project).map(f => ({ id: f.id, name: f.name, type: f.type, optionsText: f.options.join('\n') }));
+    let respText = partiesFor(project).join('\n');
+    const o = document.createElement('div'); o.className = 'overlay';
+    const draw = () => {
+      o.innerHTML = `<div class="dialog wide" role="dialog" aria-modal="true">
+        <div><div class="eyebrow">${esc(project)}</div><h4>Item columns</h4></div>
+        <p style="font-size:14px">Columns appear on every item in this project, in the report, the PDF and the dashboard. A list column also gets a dashboard filter.</p>
+        <div style="border:1px solid var(--rule);border-radius:8px;padding:12px;display:grid;gap:10px;background:var(--sheet-2)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap"><strong>Responsible</strong><span class="hint">Built-in column · pick from a list</span></div>
+          <div class="fld"><label for="col-resp">Responsible parties, one per line</label><textarea class="input" id="col-resp" rows="5" placeholder="GC&#10;SMBM&#10;Owner">${esc(respText)}</textarea></div>
+        </div>
+        <div style="display:grid;gap:12px">${rows.map((r, i) => r.removed ? '' : `
+          <div style="border:1px solid var(--rule);border-radius:8px;padding:12px;display:grid;gap:10px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="fld" style="flex:1 1 200px"><label for="col-n-${i}">Column name</label><input class="input" id="col-n-${i}" data-ci="${i}" data-k="name" value="${esc(r.name)}" placeholder="e.g. Floor Level"></div>
+              <div class="fld" style="flex:0 1 170px"><label for="col-t-${i}">Type</label><select class="input" id="col-t-${i}" data-ci="${i}" data-k="type"><option value="list" ${r.type === 'list' ? 'selected' : ''}>Pick from a list</option><option value="text" ${r.type === 'text' ? 'selected' : ''}>Free text</option></select></div>
+              <button class="btn sm" data-x="up" data-i="${i}" aria-label="Move column left" ${i === rows.findIndex(x => !x.removed) ? 'disabled' : ''}>←</button>
+              <button class="btn sm" data-x="down" data-i="${i}" aria-label="Move column right">→</button>
+              <button class="btn sm red" data-x="rm" data-i="${i}">Delete column</button>
+            </div>
+            ${r.type === 'list' ? `<div class="fld"><label for="col-o-${i}">Options, one per line</label><textarea class="input" id="col-o-${i}" data-ci="${i}" data-k="optionsText" rows="4" placeholder="Level 1&#10;Level 2">${esc(r.optionsText)}</textarea></div>` : ''}
+          </div>`).join('') || '<p class="muted" style="margin:0">This project has no extra columns yet.</p>'}</div>
+        <div><button class="btn" data-x="add">+ Add column</button></div>
+        <p class="hint" style="margin:0">Deleting a column hides it everywhere. Values already entered stay saved and come back if you add a column with the same name again.</p>
+        <div class="actions"><button class="btn" data-x="cancel">Cancel</button><button class="btn primary" data-x="save">Save columns</button></div>
+      </div>`;
+    };
+    const close = () => { o.remove(); document.removeEventListener('keydown', onKey); if (S.view === 'form') renderItemCards(); else render(); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    o.addEventListener('input', (e) => { if (e.target.id === 'col-resp') { respText = e.target.value; return; } const i = e.target.dataset.ci; if (i != null && e.target.dataset.k !== 'type') rows[+i][e.target.dataset.k] = e.target.value; });
+    o.addEventListener('change', (e) => { const i = e.target.dataset.ci; if (i != null && e.target.dataset.k === 'type') { rows[+i].type = e.target.value; draw(); } });
+    o.addEventListener('click', async (e) => {
+      const x = e.target.closest('[data-x]'); if (!x) return;
+      const i = +x.dataset.i;
+      if (x.dataset.x === 'add') { rows.push({ id: 'f' + uid8(), name: '', type: 'list', optionsText: '' }); draw(); const ins = $$('input[data-k="name"]', o); if (ins.length) ins[ins.length - 1].focus(); }
+      else if (x.dataset.x === 'rm') { rows[i].removed = true; draw(); }
+      else if (x.dataset.x === 'up' || x.dataset.x === 'down') {
+        const live = rows.map((r, k) => k).filter(k => !rows[k].removed); const pos = live.indexOf(i); const to = live[pos + (x.dataset.x === 'up' ? -1 : 1)];
+        if (to != null) { const t = rows[i]; rows[i] = rows[to]; rows[to] = t; draw(); }
+      }
+      else if (x.dataset.x === 'cancel') close();
+      else if (x.dataset.x === 'save') {
+        const live = rows.filter(r => !r.removed && r.name.trim());
+        const names = live.map(r => r.name.trim().toLowerCase());
+        if (names.some((n, k) => names.indexOf(n) !== k)) { toast('Two columns have the same name. Rename one.'); return; }
+        // Reuse a deleted column's id when its name comes back, so old values reappear.
+        const prior = (S.fieldsByProject[project] || []).concat(S.retiredFields && S.retiredFields[project] || []);
+        const fields = live.map(r => {
+          const name = r.name.trim(), old = prior.find(p => p.name.toLowerCase() === name.toLowerCase() && !live.some(l => l !== r && l.id === p.id));
+          const keepId = fieldsFor(project).some(f => f.id === r.id);
+          return { id: keepId ? r.id : (old ? old.id : r.id), name, type: r.type,
+            options: r.type === 'list' ? r.optionsText.split('\n').map(v => v.trim()).filter((v, k, a) => v && a.indexOf(v) === k) : [] };
+        });
+        const retired = { ...(S.retiredFields || {}) };
+        retired[project] = (retired[project] || []).concat(fieldsFor(project).filter(f => !fields.some(n => n.id === f.id))).filter((f, k, a) => a.findIndex(z => z.id === f.id) === k && !fields.some(n => n.id === f.id));
+        x.disabled = true; x.textContent = 'Saving…';
+        try {
+          const all = { ...S.fieldsByProject, [project]: fields };
+          const parties = respText.split('\n').map(v => v.trim()).filter((v, k, a) => v && a.indexOf(v) === k);
+          const allParties = { ...S.partiesByProject, [project]: parties };
+          await saveSettings({ projectFields: all, retiredFields: retired, projectParties: allParties });
+          S.fieldsByProject = all; S.retiredFields = retired; S.partiesByProject = allParties;
+          toast('Columns saved for ' + project); close();
+        } catch (err) { x.disabled = false; x.textContent = 'Save columns'; writeError(err); }
+      }
+    });
+    document.addEventListener('keydown', onKey);
+    draw(); document.body.appendChild(o);
+    const first = $('input[data-k="name"]', o) || $('#col-resp', o); if (first) first.focus();
+  }
+
+  // ---------- form ----------
+  function blankDraft() { return { project: '', projectNo: '', reportDate: todayISO(), visitDate: todayISO(), revision: 'n/a', items: [] }; }
+  function blankItem() { return { key: newKey(), num: null, title: '', desc: '', critical: false, responsible: '', status: 'open', note: '', updates: [], photos: [], fields: {}, carried: false }; }
+  function saveLocalDraft() {
+    if (S.view !== 'form' || S.editingId || !S.draft) return;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ draft: S.draft, uploads: [...S.sessionUploads], carryInfo: S.carryInfo })); } catch (e) {}
+  }
+  function clearLocalDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+
+  // Carry every open/pending item of a project (latest version of each) into the draft.
+  function carryForward(project) {
+    const d = S.draft;
+    d.items = d.items.filter(i => !i.carried);
+    S.carryInfo = null;
+    if (!project) return;
+    const prev = latestReportFor(project, null);
+    if (prev && !d.projectNo) d.projectNo = prev.projectNo || '';
+    const open = [...S.current.values()].filter(c => c.report.project === project && normStatus(c.item.status) !== 'closed')
+      .sort((a, b) => (a.item.num || 999) - (b.item.num || 999));
+    const carried = open.map(({ item, report }) => ({
+      key: item.key, num: item.num, title: item.title || '', desc: item.desc || '', critical: !!item.critical, responsible: item.responsible || '',
+      status: normStatus(item.status), note: '',
+      updates: [...(item.updates || []), ...(item.note ? [{ date: report.visitDate || report.reportDate, reportId: report.id, status: normStatus(item.status), note: item.note }] : [])],
+      photos: (item.photos || []).map(p => ({ ...p })), fields: { ...(item.fields || {}) }, carried: true, carriedFrom: report.id
+    }));
+    d.items = [...carried, ...d.items];
+    if (carried.length) S.carryInfo = { n: carried.length, from: prev ? mdy(prev.reportDate) : '' };
+  }
+
+  function startNew(project) {
+    S.editingId = null; S.sessionUploads = new Set(); S.pending = []; S.carryInfo = null;
+    let restored = null;
+    if (!project) { try { restored = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) {} }
+    if (restored && restored.draft) {
+      S.draft = Object.assign(blankDraft(), restored.draft); S.carryInfo = restored.carryInfo || null;
+      (restored.uploads || []).forEach(id => S.sessionUploads.add(id));
+      go('form'); toast('Restored your unsaved draft');
+      return;
+    }
+    S.draft = blankDraft();
+    if (project) { S.draft.project = project; carryForward(project); }
+    if (!S.draft.items.length) S.draft.items.push(blankItem());
+    go('form');
+  }
+  function startEdit(r) {
+    S.editingId = r.id; S.sessionUploads = new Set(); S.pending = []; S.carryInfo = null;
+    const c = JSON.parse(JSON.stringify(r)); delete c.id;
+    S.draft = Object.assign(blankDraft(), c);
+    S.draft.items = (S.draft.items || []).map(i => Object.assign(blankItem(), i, { status: normStatus(i.status), carried: !!(i.updates && i.updates.length) || !!i.carriedFrom }));
+    go('form');
+  }
+
+  function renderForm() {
+    const d = S.draft;
+    const projects = projectNames();
+    const resps = respNames();
+    app.innerHTML = `
+      <div class="eyebrow">${S.editingId ? 'Editing ' + esc(reportTitle(d)) : 'New field report'}</div>
+      <h2 class="view-title" style="margin-bottom:16px">${S.editingId ? 'Edit field report' : 'File a field report'}</h2>
+      <form class="form" id="rform" novalidate>
+        <section class="fs"><h3>Report</h3>
+          <div class="grid2">
+            <div class="fld"><label for="p-project">Project <span class="req">*</span></label><input class="input" id="p-project" list="dl-projects" value="${esc(d.project)}" placeholder="e.g. 47 Mercer Penthouse" autocomplete="off"><datalist id="dl-projects">${projects.map(p => `<option value="${esc(p)}">`).join('')}</datalist></div>
+            <div class="fld"><label for="p-no">Project no.</label><input class="input mono" id="p-no" value="${esc(d.projectNo)}" placeholder="e.g. 3E10"></div>
+            <div class="fld"><label for="p-rdate">Report date <span class="req">*</span></label><input class="input" id="p-rdate" type="date" value="${esc(d.reportDate)}"></div>
+            <div class="fld"><label for="p-vdate">Site meeting <span class="req">*</span></label><input class="input" id="p-vdate" type="date" value="${esc(d.visitDate)}"></div>
+            <div class="fld"><label for="p-rev">Revision</label><input class="input" id="p-rev" value="${esc(d.revision)}" placeholder="n/a"></div>
+          </div>
+          <div class="err" id="p-err" hidden></div>
+        </section>
+        <section class="fs"><h3>Items <span class="n" id="items-n"></span><span style="flex:1"></span><button type="button" class="btn sm" data-action="columns">Edit columns</button></h3>
+          <div id="carry-note"></div>
+          <div class="icards" id="icards"></div>
+          <div><button type="button" class="btn" data-action="add-item">+ Add item</button></div>
+        </section>
+        <div class="form-actions">
+          <button type="button" class="btn" data-action="cancel-form">${S.editingId ? 'Discard changes' : 'Discard draft'}</button>
+          <button type="submit" class="btn primary" id="save-btn">${S.editingId ? 'Save changes' : 'File report'}</button>
+        </div>
+      </form>`;
+    renderCarryNote(); renderItemCards();
+  }
+
+  function renderCarryNote() {
+    const box = $('#carry-note'); if (!box) return;
+    box.innerHTML = S.carryInfo && !S.editingId ? `<div class="notice" style="margin:0"><span>Carried forward <b>${S.carryInfo.n}</b> open and pending item${S.carryInfo.n === 1 ? '' : 's'}${S.carryInfo.from ? ' from the ' + esc(S.carryInfo.from) + ' report' : ''}. Earlier descriptions and updates are kept; add today's update to each.</span></div>` : '';
+  }
+
+  function renderItemCards() {
+    const box = $('#icards'); if (!box) return;
+    const n = $('#items-n'); if (n) n.textContent = S.draft.items.length ? S.draft.items.length + ' total' : '';
+    box.innerHTML = S.draft.items.map((it, idx) => itemCardHTML(it, idx)).join('') || '<p class="muted" style="margin:0">No items yet.</p>';
+  }
+
+  function itemCardHTML(it, opts = {}) {
+    const project = opts.project != null ? opts.project : (S.draft && S.draft.project);
+    const k = esc(it.key), st = normStatus(it.status);
+    return `<div class="icard ${it.carried ? 'carried' : ''} ${it.critical ? 'is-crit' : ''}" data-key="${k}">
+      <div class="icard-head">
+        <span class="inum">${it.num ? 'Item ' + pad2(it.num) : 'New item'}${it.carried && !opts.overlay ? '<small>CARRIED</small>' : ''}</span>
+        <span class="sp"></span>
+        <label class="check"><input type="checkbox" id="crit-${k}" data-f="critical" ${it.critical ? 'checked' : ''}> Critical</label>
+        <select class="status-sel ${st}" id="st-${k}" data-f="status" aria-label="Status">${Object.entries(STATUS).map(([v, l]) => `<option value="${v}" ${v === st ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        ${opts.overlay ? '' : `<button type="button" class="icon-btn" data-action="rm-item" aria-label="${it.carried ? 'Leave this item out of this report' : 'Remove item'}" title="${it.carried ? 'Leave out of this report' : 'Remove item'}">${ICON_TRASH}</button>`}
+      </div>
+      <div class="grid2">
+        <div class="fld"><label for="ti-${k}">Location / heading</label><input class="input" id="ti-${k}" data-f="title" value="${esc(it.title)}" placeholder="e.g. L2 Powder Room"></div>
+        <div class="fld"><label for="re-${k}">Responsible</label><select class="input" id="re-${k}" data-f="responsible">${partyOptions(it.responsible || '', project)}</select></div>
+        ${fieldsFor(project).map(f => `<div class="fld"><label for="cf-${k}-${esc(f.id)}">${esc(f.name)}</label>${f.type === 'list'
+          ? `<select class="input" id="cf-${k}-${esc(f.id)}" data-cf="${esc(f.id)}"><option value="">—</option>${[...f.options, ...(fieldVal(it, f) && !f.options.includes(fieldVal(it, f)) ? [fieldVal(it, f)] : [])].map(o => `<option ${o === fieldVal(it, f) ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`
+          : `<input class="input" id="cf-${k}-${esc(f.id)}" data-cf="${esc(f.id)}" value="${esc(fieldVal(it, f))}">`}</div>`).join('')}
+      </div>
+      <div class="fld"><div class="lb"><label for="de-${k}">Description</label><button type="button" class="bold-btn" data-action="bold" data-target="de-${k}" title="Bold the selected text (action required)">B</button></div>
+        <textarea class="input" id="de-${k}" data-f="desc" rows="3" placeholder="What was observed. Select text and press B to mark the action in bold.">${esc(it.desc)}</textarea></div>
+      ${it.carried ? `
+        ${(it.updates || []).filter(u => u.note).length ? `<div class="hist"><div class="eyebrow">Previous updates</div>${it.updates.filter(u => u.note).map(u => `<div class="h-row"><span class="dt">${esc(mdy(u.date))}</span>${richHTML(u.note)}</div>`).join('')}</div>` : ''}
+        <div class="fld"><div class="lb"><label for="no-${k}">${esc(opts.noteLabel || 'Update from this site meeting')}</label><button type="button" class="bold-btn" data-action="bold" data-target="no-${k}">B</button></div>
+          <textarea class="input" id="no-${k}" data-f="note" rows="2" placeholder="What changed since the last report">${esc(it.note)}</textarea></div>` : ''}
+      <div class="fld"><span class="lb">Photos &amp; markups</span><div id="ph-${k}">${itemPhotosEditHTML(it)}</div></div>
+    </div>`;
+  }
+
+  function itemPhotosEditHTML(it) {
+    const k = esc(it.key);
+    const pend = S.pending.filter(p => p.key === it.key);
+    const cards = (it.photos || []).map((a, i) => `
+      <div class="att">
+        <div class="pv">${a.kind === 'pdf' ? '<span class="pdf">PDF</span>' : `${a.original ? '<span class="tag">Marked up</span>' : ''}<img src="${blobUrl(a.id)}" alt="" onerror="this.style.visibility='hidden'">`}</div>
+        <div class="body">
+          <div class="nm" title="${esc(a.name)}">${esc(a.name || 'file')}</div>
+          <input class="input" id="cap-${k}-${i}" data-cap="${i}" value="${esc(a.caption || '')}" placeholder="Label, e.g. Photo:" aria-label="Label shown above the photo">
+          <div class="row-btns">
+            ${a.kind !== 'pdf' && S.assets ? `<button type="button" class="btn sm red" data-action="markup" data-i="${i}">Mark up</button>` : ''}
+            ${a.kind === 'pdf' ? `<a class="btn sm" href="${blobUrl(a.id)}" target="_blank" rel="noopener">Open</a>` : ''}
+            <button type="button" class="btn sm" data-action="rm-photo" data-i="${i}">Remove</button>
+          </div>
+        </div>
+      </div>`).join('') + pend.map(p => `<div class="att pending"><div class="pv"><div style="display:grid;gap:8px;justify-items:center"><span class="spin"></span>Uploading</div></div><div class="body"><div class="nm">${esc(p.name)}</div></div></div>`).join('');
+    const up = S.assets ? `<div class="up-row" data-drop="${k}">
+        <label class="btn sm" for="cam-${k}">Take photo</label>
+        <label class="btn sm" for="up-${k}">Add photos or PDF</label>
+        <span class="hint">or drag files here</span>
+        <input type="file" id="cam-${k}" data-up="${k}" accept="image/*" capture="environment" hidden>
+        <input type="file" id="up-${k}" data-up="${k}" accept="image/*,application/pdf,.pdf,.heic,.heif" multiple hidden>
+      </div>` : '<div class="hint">Your access doesn\'t include uploading files. Ask the page owner to make you a Contributor.</div>';
+    return (cards ? `<div class="ph-grid" style="margin-bottom:8px">${cards}</div>` : '') + up;
+  }
+  function editableItem(key) {
+    if (S.itemEdit && S.itemEdit.item.key === key) return S.itemEdit.item;
+    return S.draft ? S.draft.items.find(i => i.key === key) || null : null;
+  }
+  function refreshItemPhotos(key) {
+    const it = editableItem(key);
+    const box = document.getElementById('ph-' + key);
+    if (it && box) box.innerHTML = itemPhotosEditHTML(it);
+  }
+
+  function collectHead() {
+    const d = S.draft; if (!$('#rform')) return;
+    d.project = $('#p-project').value.trim(); d.projectNo = $('#p-no').value.trim();
+    d.reportDate = $('#p-rdate').value; d.visitDate = $('#p-vdate').value; d.revision = $('#p-rev').value.trim();
+  }
+
+  // ---------- uploads ----------
+  async function prepareImage(file) {
+    let src, w, h, revoke = null;
+    try { src = await createImageBitmap(file); w = src.width; h = src.height; }
+    catch (e) {
+      const url = URL.createObjectURL(file); revoke = url;
+      src = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('decode')); im.src = url; });
+      w = src.naturalWidth; h = src.naturalHeight;
+    }
+    const s = Math.min(1, MAX_EDGE / Math.max(w, h));
+    const cw = Math.round(w * s), ch = Math.round(h * s);
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cw, ch); ctx.drawImage(src, 0, 0, cw, ch);
+    if (revoke) URL.revokeObjectURL(revoke);
+    if (src.close) src.close();
+    return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('encode')), 'image/jpeg', 0.85));
+  }
+  function uploadErr(e, name) {
+    const code = e && e.code;
+    const m = {
+      too_large: `${name} is over 20 MB. Compress or split the PDF and try again.`,
+      unsupported_type: `${name} isn't a photo or PDF. Export drawings to PDF first.`,
+      quota_or_state: 'Storage for this log is full. Remove old attachments before adding more.',
+      rate_limited: 'Too many uploads at once. Wait a moment and add the rest.',
+      decode: `${name} couldn't be read as a photo. Try exporting it as JPEG.`,
+      not_granted: 'Your access doesn\'t include uploading files.'
+    };
+    toast(m[code] || `${name} didn't upload. Check your connection and try again.`);
+  }
+  async function addFiles(files, key) {
+    if (!S.assets) return;
+    for (const f of files) {
+      const p = { tmp: uid8(), name: f.name || 'photo.jpg', key };
+      S.pending.push(p); refreshItemPhotos(key);
+      try {
+        const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '');
+        const isImg = (f.type || '').startsWith('image/') || /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(f.name || '');
+        let blob, kind, opts;
+        if (isPdf) { blob = f; kind = 'pdf'; opts = { type: 'application/pdf' }; }
+        else if (isImg) { try { blob = await prepareImage(f); } catch (e) { throw { code: 'decode' }; } kind = 'image'; opts = { type: 'image/jpeg' }; }
+        else throw { code: 'unsupported_type' };
+        let r;
+        try { r = await S.assets.upload(blob, opts); }
+        catch (e) { if (e && e.code === 'store_unavailable') { await new Promise(z => setTimeout(z, 1200)); r = await S.assets.upload(blob, opts); } else throw e; }
+        S.sessionUploads.add(r.id);
+        const it = editableItem(key);
+        if (it) it.photos.push({ id: r.id, kind, name: kind === 'image' ? (f.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg' : f.name, caption: kind === 'image' ? 'Photo:' : '', size: r.sizeBytes });
+      } catch (e) { uploadErr(e, p.name); }
+      S.pending = S.pending.filter(x => x !== p);
+      refreshItemPhotos(key); saveLocalDraft();
+    }
+  }
+  async function discardUploads(ids) {
+    if (!S.assets) return;
+    for (const id of ids) { try { await S.assets.delete(id); } catch (e) {} }
+  }
+  function referencedIds(excludeReportId) {
+    const s = new Set();
+    S.reports.forEach(r => { if (r.id === excludeReportId) return; (r.items || []).forEach(i => (i.photos || []).forEach(p => { s.add(p.id); if (p.original) s.add(p.original); })); });
+    return s;
+  }
+
+  async function saveForm() {
+    collectHead();
+    const d = S.draft, err = $('#p-err');
+    const problems = [];
+    if (!d.project) problems.push('Add the project name.');
+    if (!d.reportDate || !d.visitDate) problems.push('Fill in the report date and site meeting date.');
+    if (problems.length) { err.textContent = problems.join(' '); err.hidden = false; $('#p-project').scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+    if (S.pending.length) { toast('Wait for uploads to finish before filing.'); return; }
+    err.hidden = true;
+    const btn = $('#save-btn'); btn.disabled = true; btn.textContent = 'Saving…';
+    // Number new items after the highest number used in this project.
+    let maxNum = 0;
+    S.reports.forEach(r => { if (r.project === d.project) (r.items || []).forEach(i => { if (i.num > maxNum) maxNum = i.num; }); });
+    d.items.forEach(i => { if (i.num > maxNum) maxNum = i.num; });
+    const items = d.items.filter(i => (i.desc || '').trim() || (i.title || '').trim() || (i.photos || []).length).map(i => ({
+      key: i.key, num: i.num || ++maxNum, title: (i.title || '').trim(), desc: (i.desc || '').trim(), critical: !!i.critical,
+      responsible: (i.responsible || '').trim(), status: normStatus(i.status), note: (i.note || '').trim(),
+      updates: (i.updates || []).map(u => ({ date: u.date, reportId: u.reportId || null, status: normStatus(u.status), note: u.note || '' })),
+      photos: (i.photos || []).map(p => { const o = { id: p.id, kind: p.kind || 'image', name: p.name || '', caption: (p.caption || '').trim(), size: p.size || 0 }; if (p.original) o.original = p.original; return o; }),
+      fields: Object.fromEntries(Object.entries(i.fields || {}).filter(([, v]) => typeof v === 'string' && v.trim()).map(([k, v]) => [k, v.trim()])),
+      carriedFrom: i.carriedFrom || null
+    }));
+    const now = Date.now();
+    const body = { project: d.project, projectNo: d.projectNo, reportDate: d.reportDate, visitDate: d.visitDate, revision: d.revision || 'n/a', items, updatedAt: now, updatedBy: S.uid };
+    try {
+      const col = S.db.collection('reports');
+      let id;
+      if (S.editingId) {
+        const prev = S.reports.find(x => x.id === S.editingId) || {};
+        id = S.editingId;
+        await col.doc(id).set({ ...body, author: prev.author || S.uid, createdAt: prev.createdAt || now });
+      } else {
+        const ref = col.doc(); id = ref.id;
+        await ref.set({ ...body, author: S.uid, createdAt: now });
+        clearLocalDraft();
+      }
+      const kept = new Set(); items.forEach(i => i.photos.forEach(p => { kept.add(p.id); if (p.original) kept.add(p.original); }));
+      discardUploads([...S.sessionUploads].filter(x => !kept.has(x)));
+      const wasEdit = !!S.editingId;
+      S.sessionUploads = new Set(); S.editingId = null; S.draft = null; S.carryInfo = null;
+      toast(wasEdit ? 'Changes saved' : 'Report filed');
+      go('detail', id);
+    } catch (e) {
+      btn.disabled = false; btn.textContent = S.editingId ? 'Save changes' : 'File report';
+      writeError(e);
+    }
+  }
+  function writeError(e) {
+    const code = e && e.code;
+    if (code === 'invalid_argument') { S.canWrite = false; toast('Your access is read-only, so this change wasn\'t saved.'); }
+    else if (code === 'quota_exceeded') toast('The report log is full. Delete old reports to make room.');
+    else if (code === 'resource_exhausted') toast('Too many changes at once. Wait a few seconds and try again.');
+    else toast('That didn\'t save. Check your connection and try again.');
+  }
+
+  // ---------- markup editor ----------
+  function openMarkup(imgId, onSaved) {
+    const o = document.createElement('div'); o.className = 'mk'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'Mark up photo');
+    const COLORS = [['#ff2a1f', 'Red'], ['#1e6fe0', 'Blue'], ['#ffc400', 'Yellow'], ['#111111', 'Black'], ['#ffffff', 'White']];
+    const TOOLS = [
+      ['pen', 'Pen', '<path d="M4 20l4-1 11-11-3-3L5 16l-1 4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'],
+      ['ellipse', 'Circle', '<ellipse cx="12" cy="12" rx="8" ry="6" stroke="currentColor" stroke-width="1.8"/>'],
+      ['arrow', 'Arrow', '<path d="M5 19L19 5M19 5h-8M19 5v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'],
+      ['cloud', 'Cloud', '<path d="M6 8a2 2 0 014 0 2 2 0 014 0 2 2 0 014 0 2 2 0 010 4 2 2 0 010 4 2 2 0 01-4 0 2 2 0 01-4 0 2 2 0 01-4 0 2 2 0 010-4 2 2 0 010-4z" stroke="currentColor" stroke-width="1.5"/>'],
+      ['box', 'Box', '<rect x="4" y="6" width="16" height="12" stroke="currentColor" stroke-width="1.8"/>'],
+      ['text', 'Text', '<path d="M5 6h14M12 6v13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>']
+    ];
+    let tool = 'ellipse', color = COLORS[0][0], weight = 2;
+    const shapes = []; let cur = null;
+    o.innerHTML = `
+      <div class="mk-tools">
+        <div class="grp">${TOOLS.map(([k, l, p]) => `<button class="tool" data-tool="${k}" aria-pressed="${k === tool}" title="${l}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">${p}</svg><span>${l}</span></button>`).join('')}</div>
+        <div class="grp">${COLORS.map(([c, l]) => `<button class="swatch" data-color="${c}" style="background:${c}" aria-label="${l}" aria-pressed="${c === color}"></button>`).join('')}</div>
+        <div class="grp">${[[1, 'Thin'], [2, 'Medium'], [3.5, 'Thick']].map(([w, l]) => `<button class="tool" data-w="${w}" aria-pressed="${w === weight}" title="${l} line"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="${w * 1.4}" stroke-linecap="round"/></svg></button>`).join('')}</div>
+        <div class="grp"><button class="tool" data-act="undo">Undo</button><button class="tool" data-act="clear">Clear</button></div>
+      </div>
+      <div class="mk-stage"><canvas></canvas></div>
+      <div class="mk-foot"><span class="hint" id="mk-hint">Loading photo…</span><button class="btn" data-act="cancel">Cancel</button><button class="btn primary" data-act="save" disabled>Save markup</button></div>`;
+    document.body.appendChild(o);
+    const cv = $('canvas', o), ctx = cv.getContext('2d'), stage = $('.mk-stage', o);
+    const img = new Image(); img.crossOrigin = 'anonymous'; let unit = 2;
+    img.onload = () => {
+      const s = Math.min(1, MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+      cv.width = Math.round(img.naturalWidth * s); cv.height = Math.round(img.naturalHeight * s);
+      unit = Math.max(cv.width, cv.height) / 500;
+      $('#mk-hint', o).textContent = 'Drag to draw. Circle the condition, add an arrow or a note.';
+      $('[data-act="save"]', o).disabled = false; redraw();
+    };
+    img.onerror = () => { $('#mk-hint', o).textContent = 'This photo couldn\'t be loaded for markup.'; };
+    img.src = blobUrl(imgId);
+
+    function drawShape(s) {
+      ctx.save(); ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = s.w * unit; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const x0 = Math.min(s.x0, s.x1), x1 = Math.max(s.x0, s.x1), y0 = Math.min(s.y0, s.y1), y1 = Math.max(s.y0, s.y1);
+      if (s.type === 'pen') { ctx.beginPath(); s.pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); }
+      else if (s.type === 'box') ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+      else if (s.type === 'ellipse') { ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.max(1, (x1 - x0) / 2), Math.max(1, (y1 - y0) / 2), 0, 0, Math.PI * 2); ctx.stroke(); }
+      else if (s.type === 'arrow') {
+        const a = Math.atan2(s.y1 - s.y0, s.x1 - s.x0), hl = Math.max(14, s.w * unit * 5);
+        ctx.beginPath(); ctx.moveTo(s.x0, s.y0); ctx.lineTo(s.x1, s.y1); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x1 - hl * Math.cos(a - 0.45), s.y1 - hl * Math.sin(a - 0.45)); ctx.lineTo(s.x1 - hl * Math.cos(a + 0.45), s.y1 - hl * Math.sin(a + 0.45)); ctx.closePath(); ctx.fill();
+      } else if (s.type === 'cloud') {
+        const target = Math.max(12 * unit, 10);
+        const edges = [[x0, y0, x1, y0], [x1, y0, x1, y1], [x1, y1, x0, y1], [x0, y1, x0, y0]];
+        ctx.beginPath();
+        edges.forEach(([ax, ay, bx, by]) => {
+          const len = Math.hypot(bx - ax, by - ay); if (len < 1) return;
+          const n = Math.max(1, Math.round(len / target)), ang = Math.atan2(by - ay, bx - ax);
+          for (let i = 0; i < n; i++) {
+            const px = ax + (bx - ax) * i / n, py = ay + (by - ay) * i / n, qx = ax + (bx - ax) * (i + 1) / n, qy = ay + (by - ay) * (i + 1) / n;
+            ctx.moveTo(px, py); ctx.arc((px + qx) / 2, (py + qy) / 2, len / n / 2, ang + Math.PI, ang, false);
+          }
+        });
+        ctx.stroke();
+      } else if (s.type === 'text') {
+        const fs = Math.max(16, s.w * unit * 9);
+        ctx.font = `bold ${fs}px Arial, Helvetica, sans-serif`; ctx.textBaseline = 'top';
+        ctx.lineWidth = fs / 5; ctx.strokeStyle = s.color === '#ffffff' || s.color === '#ffc400' ? '#000' : '#fff';
+        s.text.split('\n').forEach((ln, i) => { ctx.strokeText(ln, s.x0, s.y0 + i * fs * 1.15); ctx.fillText(ln, s.x0, s.y0 + i * fs * 1.15); });
+      }
+      ctx.restore();
+    }
+    function redraw() { ctx.clearRect(0, 0, cv.width, cv.height); if (img.complete && img.naturalWidth) ctx.drawImage(img, 0, 0, cv.width, cv.height); shapes.forEach(drawShape); if (cur) drawShape(cur); }
+    function pt(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; }
+    let textBox = null;
+    function commitText() {
+      if (!textBox) return; const t = textBox.el.value.trim();
+      if (t) shapes.push({ type: 'text', x0: textBox.x, y0: textBox.y, x1: textBox.x, y1: textBox.y, text: t, color, w: weight });
+      textBox.el.remove(); textBox = null; redraw();
+    }
+    cv.addEventListener('pointerdown', (e) => {
+      if (!cv.width) return;
+      if (textBox) { commitText(); return; }
+      const [x, y] = pt(e);
+      if (tool === 'text') {
+        const sr = stage.getBoundingClientRect();
+        const el = document.createElement('input'); el.className = 'mk-text'; el.placeholder = 'Type a note, Enter to place';
+        el.style.left = Math.max(0, Math.min(e.clientX - sr.left, sr.width - 180)) + 'px'; el.style.top = (e.clientY - sr.top) + 'px';
+        stage.appendChild(el); textBox = { el, x, y };
+        el.addEventListener('keydown', (k) => { if (k.key === 'Enter') { k.preventDefault(); commitText(); } else if (k.key === 'Escape') { k.stopPropagation(); el.remove(); textBox = null; } });
+        setTimeout(() => el.focus(), 0); e.preventDefault(); return;
+      }
+      cv.setPointerCapture(e.pointerId);
+      cur = tool === 'pen' ? { type: 'pen', pts: [[x, y]], color, w: weight, x0: x, y0: y, x1: x, y1: y } : { type: tool, x0: x, y0: y, x1: x, y1: y, color, w: weight };
+    });
+    cv.addEventListener('pointermove', (e) => { if (!cur) return; const [x, y] = pt(e); if (cur.type === 'pen') cur.pts.push([x, y]); else { cur.x1 = x; cur.y1 = y; } redraw(); });
+    const end = () => { if (!cur) return; const tiny = cur.type === 'pen' ? cur.pts.length < 2 : Math.hypot(cur.x1 - cur.x0, cur.y1 - cur.y0) < 6; if (!tiny) shapes.push(cur); cur = null; redraw(); };
+    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    const close = () => { o.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (textBox) return; if (e.key === 'Escape') close(); else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); shapes.pop(); redraw(); } };
+    document.addEventListener('keydown', onKey);
+    o.addEventListener('click', async (e) => {
+      const t = e.target.closest('[data-tool],[data-color],[data-w],[data-act]'); if (!t) return;
+      if (t.dataset.tool) { commitText(); tool = t.dataset.tool; $$('[data-tool]', o).forEach(b => b.setAttribute('aria-pressed', b === t)); }
+      else if (t.dataset.color) { color = t.dataset.color; $$('[data-color]', o).forEach(b => b.setAttribute('aria-pressed', b === t)); }
+      else if (t.dataset.w) { weight = +t.dataset.w; $$('[data-w]', o).forEach(b => b.setAttribute('aria-pressed', b === t)); }
+      else if (t.dataset.act === 'undo') { shapes.pop(); redraw(); }
+      else if (t.dataset.act === 'clear') { shapes.length = 0; redraw(); }
+      else if (t.dataset.act === 'cancel') close();
+      else if (t.dataset.act === 'save') {
+        commitText();
+        if (!shapes.length) { toast('Draw something first, or cancel.'); return; }
+        t.disabled = true; t.textContent = 'Saving…';
+        try {
+          const blob = await new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('encode')), 'image/jpeg', 0.9));
+          const r = await S.assets.upload(blob, { type: 'image/jpeg' });
+          await onSaved(r); close();
+        } catch (err) { t.disabled = false; t.textContent = 'Save markup'; uploadErr(err, 'The markup'); }
+      }
+    });
+  }
+
+  // ---------- PDF export ----------
+  /*PDF-BEGIN*/
+  function buildFieldReportPdf(JsPDF, R, A) {
+    const doc = new JsPDF({ unit: 'pt', format: 'letter', compress: true });
+    const W = 612, H = 792, M = 72, CW = W - 2 * M;
+    const TOP = 72, BOTTOM = H - 64;
+    const INK = [0, 0, 0], RED = [204, 0, 0], GREY = [90, 90, 90];
+    const CF = R.columns || [], CFW = 62;
+    const COLS = [M, M + 26, M + 96]; CF.forEach(() => COLS.push(COLS[COLS.length - 1] + CFW)); COLS.push(W - M);
+    const DI = COLS.length - 2;
+    const PAD = 4, FS = 9, LH = 10.6;
+    let y = TOP;
+
+    const header = () => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...INK);
+      if (A && A.logo) { const lh = 26; doc.addImage(A.logo.data, 'PNG', M, 24, lh * A.logo.w / A.logo.h, lh, 'smbm-logo', 'FAST'); }
+      else doc.text('Studio MBM', M, 44);
+      doc.text(R.reportDateMDY, W - M, 44, { align: 'right' });
+    };
+    const newPage = () => { doc.addPage(); header(); y = TOP; };
+
+    // Rich text: **bold** runs, word-wrapped into lines of {t, b} segments.
+    const measure = (t, b, size) => { doc.setFont('helvetica', b ? 'bold' : 'normal'); doc.setFontSize(size); return doc.getTextWidth(t); };
+    function wrapRich(text, width, size, forceBold) {
+      const out = [];
+      String(text || '').replace(/\r/g, '').split('\n').forEach(para => {
+        const words = [];
+        const re = /\*\*([\s\S]+?)\*\*/g; let last = 0, m;
+        const pushRun = (s, b) => s.split(/(\s+)/).forEach(tok => { if (tok && !/^\s+$/.test(tok)) words.push({ t: tok, b: b || !!forceBold }); else if (tok) words.push({ sp: true }); });
+        while ((m = re.exec(para))) { pushRun(para.slice(last, m.index), false); pushRun(m[1], true); last = m.index + m[0].length; }
+        pushRun(para.slice(last), false);
+        let line = [], lw = 0, pendingSpace = false;
+        words.forEach(w => {
+          if (w.sp) { pendingSpace = line.length > 0; return; }
+          const sw = pendingSpace ? measure(' ', false, size) : 0;
+          const ww = measure(w.t, w.b, size);
+          if (line.length && lw + sw + ww > width) { out.push(line); line = []; lw = 0; }
+          else if (pendingSpace && line.length) { line.push({ t: ' ', b: false }); lw += sw; }
+          line.push({ t: w.t, b: w.b }); lw += ww; pendingSpace = false;
+        });
+        out.push(line);
+      });
+      return out;
+    }
+    function drawRichLine(line, x, yy, size, color) {
+      let cx = x; doc.setTextColor(...color);
+      line.forEach(seg => { doc.setFont('helvetica', seg.b ? 'bold' : 'normal'); doc.setFontSize(size); doc.text(seg.t, cx, yy); cx += doc.getTextWidth(seg.t); });
+    }
+    function paragraph(text, opts) {
+      const o = Object.assign({ size: FS, lh: LH, color: INK, x: M, width: CW }, opts || {});
+      wrapRich(text, o.width, o.size).forEach(line => { if (y + o.lh > BOTTOM) newPage(); drawRichLine(line, o.x, y + o.size * 0.82, o.size, o.color); y += o.lh; });
+    }
+
+    // ---- page 1 heading block ----
+    header();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(21); doc.setTextColor(...INK);
+    doc.text(R.reportDateMDY + ' Field Report', M, 91);
+    y = 104;
+    const kv = (k, v) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(FS); doc.setTextColor(...INK); doc.text(k, M, y + 8);
+      doc.setFont('helvetica', 'normal'); doc.text(String(v || ''), M + 72, y + 8); y += 18;
+    };
+    kv('Project', R.project); kv('Date', R.reportDateLong); kv('Site Meeting', R.visitDateLong);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(FS); doc.text('Revision', M, y + 8);
+    const revX = M + doc.getTextWidth('Revision ') + 1;
+    doc.setFont('helvetica', 'normal'); doc.text(String(R.revision || 'n/a'), revX, y + 8); y += 28;
+    paragraph(R.disclaimer, { lh: 10 });
+    y += 10;
+    doc.setDrawColor(...INK); doc.setLineWidth(0.75); doc.line(M, y, W - M, y); y += 6;
+    paragraph('Items requiring correction/action in the field are in **bold**.', { lh: 10 });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(FS); doc.setTextColor(...INK);
+    doc.text('Critical items are in ', M, y + 7.4); const cx = M + doc.getTextWidth('Critical items are in ');
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED); doc.text('red', cx, y + 7.4);
+    doc.setTextColor(...INK); doc.text('.', cx + doc.getTextWidth('red'), y + 7.4); y += 10;
+    paragraph('Items from previous Field Reports marked CLOSED are removed from subsequent Field Reports.', { lh: 10 });
+    y += 26;
+
+    // ---- items table ----
+    const cellX = COLS[DI] + PAD, cellW = COLS[DI + 1] - COLS[DI] - 2 * PAD;
+    const drawRowFrame = (top, bottom) => { doc.setDrawColor(...INK); doc.setLineWidth(0.6); for (let i = 0; i < COLS.length - 1; i++) doc.rect(COLS[i], top, COLS[i + 1] - COLS[i], bottom - top); };
+    // header row
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(FS);
+    const cfHead = CF.map(c => doc.splitTextToSize(String(c.name || ''), CFW - 2 * PAD));
+    const hh = 13 + (Math.max(1, ...cfHead.map(l => l.length)) - 1) * LH; if (y + hh + 40 > BOTTOM) newPage();
+    drawRowFrame(y, y + hh);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(FS); doc.setTextColor(...INK);
+    doc.text('#', (COLS[0] + COLS[1]) / 2, y + 9.5, { align: 'center' }); doc.text('Status', COLS[1] + PAD, y + 9.5);
+    cfHead.forEach((lines, j) => lines.forEach((ln, k) => doc.text(ln, COLS[2 + j] + PAD, y + 9.5 + k * LH)));
+    doc.text('Date/Description/Photo', COLS[DI] + PAD, y + 9.5);
+    y += hh;
+
+    if (!R.items.length) { drawRowFrame(y, y + 20); doc.setFont('helvetica', 'normal'); doc.text('No items recorded.', cellX, y + 13); y += 20; }
+
+    R.items.forEach(it => {
+      const color = it.critical ? RED : INK;
+      const blocks = [];
+      if (it.title) blocks.push({ kind: 'title', text: it.title });
+      wrapRich(it.desc, cellW, FS).forEach(l => blocks.push({ kind: 'line', line: l, color }));
+      it.updates.forEach(u => wrapRich(`${u.dateMDY}: ${u.note}`, cellW, FS).forEach(l => blocks.push({ kind: 'line', line: l, color })));
+      if (it.responsible) blocks.push({ kind: 'line', line: [{ t: 'Responsible: ' + it.responsible, b: false }], color: GREY });
+      it.photos.forEach(p => {
+        if (p.caption) wrapRich(p.caption, cellW, FS).forEach(l => blocks.push({ kind: 'line', line: l, color: INK }));
+        if (p.data) {
+          const maxW = Math.min(cellW, 300), maxH = 300;
+          const s = Math.min(maxW / p.w, maxH / p.h);
+          blocks.push({ kind: 'img', data: p.data, w: p.w * s, h: p.h * s });
+        } else if (p.pdfName) blocks.push({ kind: 'line', line: [{ t: 'Attachment: ' + p.pdfName, b: false }], color: GREY });
+      });
+      if (!blocks.length) blocks.push({ kind: 'line', line: [{ t: '', b: false }], color: INK });
+
+      const firstH = blocks[0].kind === 'img' ? blocks[0].h + 4 : LH;
+      if (y + PAD + firstH + PAD > BOTTOM) newPage();
+      let segTop = y, first = true;
+      const labels = () => {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(FS); doc.setTextColor(...INK);
+        doc.text(String(it.num || ''), COLS[0] + PAD, segTop + PAD + 7.6);
+        doc.text(it.statusLabel.toUpperCase(), COLS[1] + PAD, segTop + PAD + 7.6);
+        doc.setFont('helvetica', 'normal');
+        cfVals.forEach((lines, j) => lines.forEach((ln, k) => doc.text(ln, COLS[2 + j] + PAD, segTop + PAD + 7.6 + k * LH)));
+      };
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(FS);
+      const cfVals = CF.map((c, j) => doc.splitTextToSize(String((it.cols || [])[j] || ''), CFW - 2 * PAD));
+      const minBody = Math.max(0, ...cfVals.map(l => l.length)) * LH;
+      labels(); y += PAD; const bodyTop = y;
+      blocks.forEach(b => {
+        const h = b.kind === 'img' ? b.h + 3 : LH;
+        if (y + h > BOTTOM) { drawRowFrame(segTop, y + PAD); newPage(); segTop = y; first = false; y += PAD; }
+        if (b.kind === 'title') {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(FS); doc.setTextColor(...color);
+          const t = doc.splitTextToSize(b.text, cellW)[0];
+          doc.text(t, cellX, y + 7.6); doc.setDrawColor(...color); doc.setLineWidth(0.5); doc.line(cellX, y + 8.8, cellX + doc.getTextWidth(t), y + 8.8);
+          y += LH;
+        } else if (b.kind === 'line') { drawRichLine(b.line, cellX, y + 7.6, FS, b.color); y += LH; }
+        else { doc.addImage(b.data, 'JPEG', cellX, y + 1, b.w, b.h, undefined, 'FAST'); y += h; }
+      });
+      if (first && y < bodyTop + minBody) y = bodyTop + minBody;
+      y += PAD;
+      drawRowFrame(segTop, y);
+    });
+
+    // ---- footer on every page ----
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8.5); doc.setTextColor(...INK);
+      doc.setFont('helvetica', 'normal'); doc.text('Project: ', M, H - 34);
+      doc.setFont('helvetica', 'bold'); doc.text(R.project, M + doc.getTextWidth('Project: ') + 1, H - 34);
+      doc.setFont('helvetica', 'normal'); doc.text('Field Report', W / 2, H - 34, { align: 'center' });
+      doc.text(String(i), W - M, H - 34, { align: 'right' });
+    }
+    return doc;
+  }
+  /*PDF-END*/
+
+  async function loadForPdf(id) {
+    const img = await new Promise((res) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null); im.src = blobUrl(id); });
+    if (!img || !img.naturalWidth) return null;
+    const s = Math.min(1, 1500 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+    return { data: c.toDataURL('image/jpeg', 0.82), w: c.width, h: c.height };
+  }
+
+  async function logoPng() {
+    try {
+      const w = 852, h = 390;
+      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(logoSvg('#293d9a', `width="${w}" height="${h}"`)); });
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      return { data: c.toDataURL('image/png'), w, h };
+    } catch (e) { return null; }
+  }
+
+  async function exportPdf(r) {
+    if (!window.jspdf || !window.jspdf.jsPDF) { toast('The PDF tool didn\'t load. Reload the page and try again.'); return; }
+    if (!S.downloads) { toast('The download didn\'t start. Try again in Chrome or Safari.'); return; }
+    const items = (r.items || []).slice().sort((a, b) => (a.num || 999) - (b.num || 999));
+    const photoTotal = items.reduce((n, i) => n + (i.photos || []).filter(p => p.kind !== 'pdf').length, 0);
+    const o = document.createElement('div'); o.className = 'overlay';
+    o.innerHTML = `<div class="dialog prog"><h4>Building PDF</h4><p id="pg-t">Preparing ${photoTotal} photo${photoTotal === 1 ? '' : 's'}…</p><div class="bar2"><i id="pg-b"></i></div></div>`;
+    document.body.appendChild(o);
+    try {
+      let done = 0;
+      const R = {
+        project: r.project || '', reportDateMDY: mdy(r.reportDate), reportDateLong: longDate(r.reportDate), visitDateLong: longDate(r.visitDate || r.reportDate),
+        revision: r.revision || 'n/a', disclaimer: DISCLAIMER, items: [], columns: fieldsFor(r.project).map(f => ({ name: f.name }))
+      };
+      const cfs = fieldsFor(r.project);
+      const logo = await logoPng();
+      for (const it of items) {
+        const photos = [];
+        for (const p of (it.photos || [])) {
+          if (p.kind === 'pdf') { photos.push({ caption: p.caption, pdfName: p.name || 'document.pdf' }); continue; }
+          const im = await loadForPdf(p.id);
+          done++; $('#pg-t', o).textContent = `Preparing photos (${done} of ${photoTotal})…`; $('#pg-b', o).style.width = Math.round(done / Math.max(1, photoTotal) * 100) + '%';
+          photos.push(im ? { caption: p.caption, ...im } : { caption: (p.caption ? p.caption + ' ' : '') + '[photo unavailable]' });
+        }
+        const st = normStatus(it.status);
+        R.items.push({
+          num: it.num, status: st, statusLabel: STATUS[st], cols: cfs.map(f => fieldVal(it, f)), title: it.title, desc: it.desc, critical: !!it.critical, responsible: '',
+          updates: [...(it.updates || []).filter(u => u.note).map(u => ({ dateMDY: mdy(u.date), note: u.note })), ...(it.note ? [{ dateMDY: mdy(r.visitDate || r.reportDate), note: it.note }] : [])],
+          photos
+        });
+      }
+      $('#pg-t', o).textContent = 'Laying out pages…';
+      const doc = buildFieldReportPdf(window.jspdf.jsPDF, R, { logo });
+      const blob = doc.output('blob');
+      const v = parseDate(r.visitDate || r.reportDate);
+      const fname = `${(r.projectNo || r.project || 'Project').replace(/[\\/:*?"<>|]+/g, '-')}-SMBM-${pad2(v.getMonth() + 1)}.${pad2(v.getDate())}.${v.getFullYear()}_Field_Report.pdf`;
+      o.remove();
+      await S.downloads.save({ filename: fname, data: blob });
+      toast('PDF saved');
+    } catch (e) {
+      o.remove();
+      const code = e && e.code;
+      if (code === 'declined') return;
+      if (code === 'rate_limited') toast('A download prompt is already open. Finish that one first.');
+      else if (code === 'unavailable' || code === 'not_granted' || code === 'capability_disabled') toast('The download didn\'t start. Try again in Chrome or Safari.');
+      else toast('The PDF couldn\'t be built. Try again, and tell the page owner if it keeps failing.');
+    }
+  }
+
+  // ---------- events ----------
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-action]'); if (!b) return;
+    const a = b.dataset.action;
+    const r = S.reports.find(x => x.id === S.currentId);
+    const card = b.closest('[data-key].icard');
+    const it = card ? editableItem(card.dataset.key) : null;
+    if (a === 'home') { if (S.view === 'form') saveLocalDraft(); go('dash'); }
+    else if (a === 'tab') { S.tab = b.dataset.tab; persistFilters(); renderDash(); }
+    else if (a === 'ifstatus') { S.itf.status = b.dataset.st; persistFilters(); renderItemsTab(); }
+    else if (a === 'item') { if (e.target.closest('select')) return; itemOverlay(b.dataset.key); }
+    else if (a === 'new') startNew();
+    else if (a === 'columns') {
+      if (S.view === 'form') collectHead();
+      const proj = b.dataset.project || (S.draft && S.draft.project);
+      if (!proj) { toast('Enter the project name first. Columns are set per project.'); return; }
+      columnsDialog(proj);
+    }
+    else if (a === 'open') { $$('.overlay').forEach(x => x.remove()); go('detail', b.dataset.id); }
+    else if (a === 'edit' && r) startEdit(r);
+    else if (a === 'next' && r) { clearLocalDraft(); startNew(r.project); }
+    else if (a === 'copy' && r) copyText(r);
+    else if (a === 'pdf' && r) exportPdf(r);
+    else if (a === 'lightbox') lightbox(S.lb[b.dataset.lb], +b.dataset.k);
+    else if (a === 'delete' && r) {
+      const ok = await confirmBox('Delete this report?', `${reportTitle(r)} for ${r.project} will be removed for everyone. Items it carried forward go back to their previous report. This can't be undone.`, 'Delete report');
+      if (!ok) return;
+      try {
+        await S.db.collection('reports').doc(r.id).delete();
+        const still = referencedIds(r.id), ids = [];
+        (r.items || []).forEach(i => (i.photos || []).forEach(p => { [p.id, p.original].forEach(x => { if (x && !still.has(x)) ids.push(x); }); }));
+        discardUploads(ids);
+        toast('Report deleted'); go('dash');
+      } catch (er) { writeError(er); }
+    }
+    else if (a === 'add-item') { S.draft.items.push(blankItem()); renderItemCards(); const cards = $$('.icard'); const last = cards[cards.length - 1]; if (last) { last.scrollIntoView({ block: 'center', behavior: 'smooth' }); const t = $('input[data-f="title"]', last); if (t) t.focus(); } saveLocalDraft(); }
+    else if (a === 'rm-item' && it) {
+      const hasContent = (it.desc || '').trim() || (it.photos || []).length;
+      if (hasContent && !(await confirmBox(it.carried ? 'Leave this item out?' : 'Remove this item?', it.carried ? 'It stays in the dashboard with its status from the last report.' : 'Its description and photos will be removed from this draft.', it.carried ? 'Leave out' : 'Remove'))) return;
+      S.draft.items = S.draft.items.filter(i => i !== it); renderItemCards(); saveLocalDraft();
+    }
+    else if (a === 'rm-photo' && it) { it.photos.splice(+b.dataset.i, 1); refreshItemPhotos(it.key); saveLocalDraft(); }
+    else if (a === 'markup' && it) {
+      const i = +b.dataset.i, att = it.photos[i];
+      openMarkup(att.id, async (res) => {
+        S.sessionUploads.add(res.id);
+        it.photos[i] = { ...att, id: res.id, original: att.original || att.id, size: res.sizeBytes };
+        refreshItemPhotos(it.key); saveLocalDraft(); toast('Markup added to this item');
+      });
+    }
+    else if (a === 'bold') {
+      const ta = document.getElementById(b.dataset.target); if (!ta) return;
+      const s = ta.selectionStart, en = ta.selectionEnd;
+      if (s === en) { toast('Select the words to bold first.'); ta.focus(); return; }
+      const v = ta.value, sel = v.slice(s, en);
+      const isB = sel.startsWith('**') && sel.endsWith('**') && sel.length > 4;
+      const rep = isB ? sel.slice(2, -2) : '**' + sel.trim() + '**' + (sel.endsWith(' ') ? ' ' : '');
+      ta.value = v.slice(0, s) + rep + v.slice(en); ta.focus(); ta.setSelectionRange(s, s + rep.length);
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    else if (a === 'cancel-form') {
+      const isEdit = !!S.editingId;
+      const ok = await confirmBox(isEdit ? 'Discard your changes?' : 'Discard this draft?', isEdit ? 'The report stays as it was before you started editing.' : 'The draft and any photos you uploaded to it will be removed.', 'Discard');
+      if (!ok) return;
+      discardUploads([...S.sessionUploads]);
+      S.sessionUploads = new Set(); if (!isEdit) clearLocalDraft();
+      const back = S.editingId; S.editingId = null; S.draft = null; S.carryInfo = null;
+      back ? go('detail', back) : go('dash');
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.trk-row')) { e.preventDefault(); itemOverlay(e.target.dataset.key); }
+  });
+  document.addEventListener('submit', (e) => { if (e.target.id === 'rform') { e.preventDefault(); saveForm(); } });
+
+  let draftTimer = null;
+  document.addEventListener('input', (e) => {
+    const t = e.target;
+    if (t.id === 'if-q') { S.itf.q = t.value; persistFilters(); keepFocus('if-q', renderItemsTab); return; }
+    if (t.id === 'rf-q') { S.rf.q = t.value; persistFilters(); keepFocus('rf-q', renderReportsTab); return; }
+    const card = t.closest('.icard');
+    if (card) {
+      const it = editableItem(card.dataset.key); if (!it) return;
+      if (t.dataset.f && t.type !== 'checkbox' && t.tagName !== 'SELECT') it[t.dataset.f] = t.value;
+      else if (t.dataset.cf && t.tagName !== 'SELECT') { it.fields = it.fields || {}; it.fields[t.dataset.cf] = t.value; }
+      else if (t.dataset.cap != null) { const p = it.photos[+t.dataset.cap]; if (p) p.caption = t.value; }
+    } else if (S.view === 'form' && S.draft) collectHead();
+    else return;
+    clearTimeout(draftTimer); draftTimer = setTimeout(saveLocalDraft, 600);
+  });
+  document.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.id === 'if-project') { S.itf.project = t.value; persistFilters(); renderItemsTab(); return; }
+    if (t.id === 'if-resp') { S.itf.resp = t.value; persistFilters(); renderItemsTab(); return; }
+    if (t.id === 'if-crit') { S.itf.critical = t.checked; persistFilters(); renderItemsTab(); return; }
+    if (t.dataset.cfFilter) { if (t.value) S.itf.cf[t.dataset.cfFilter] = t.value; else delete S.itf.cf[t.dataset.cfFilter]; persistFilters(); renderItemsTab(); return; }
+    if (t.id === 'rf-project') { S.rf.project = t.value; persistFilters(); renderReportsTab(); return; }
+    if (t.dataset.statusFor) { setItemStatus(t.dataset.report, t.dataset.statusFor, t.value); return; }
+    if (t.dataset.respFor) { updateItem(t.dataset.report, t.dataset.respFor, { responsible: t.value }, t.value ? 'Assigned to ' + t.value : 'Responsible party cleared'); return; }
+    if (t.dataset.cfSet) {
+      const c = S.current.get(t.dataset.key); const r = S.reports.find(x => x.id === t.dataset.report);
+      const it = r && (r.items || []).find(i => i.key === t.dataset.key);
+      if (!it) return;
+      const fields = { ...(it.fields || {}), [t.dataset.cfSet]: t.value };
+      if (!t.value) delete fields[t.dataset.cfSet];
+      updateItem(r.id, it.key, { fields }, t.value ? `${t.dataset.cfName || 'Column'} set to ${t.value}` : `${t.dataset.cfName || 'Column'} cleared`);
+      return;
+    }
+    const card0 = t.closest('.icard');
+    if (card0 && S.itemEdit && card0.dataset.key === S.itemEdit.item.key) { applyCardChange(t, card0, S.itemEdit.item); return; }
+    if (S.view !== 'form' || !S.draft) return;
+    if (t.id === 'p-project' && !S.editingId) {
+      collectHead();
+      const hadCarry = S.draft.items.some(i => i.carried);
+      const onlyBlank = S.draft.items.every(i => i.carried || (!(i.desc || '').trim() && !(i.title || '').trim() && !(i.photos || []).length));
+      if (onlyBlank) S.draft.items = S.draft.items.filter(i => i.carried);
+      carryForward(S.draft.project);
+      if (!S.draft.items.length) S.draft.items.push(blankItem());
+      $('#p-no').value = S.draft.projectNo || '';
+      renderCarryNote(); renderItemCards(); saveLocalDraft();
+      if (S.carryInfo) toast(`Carried forward ${S.carryInfo.n} open item${S.carryInfo.n === 1 ? '' : 's'}`);
+      else if (hadCarry) toast('Removed items carried from the other project');
+      return;
+    }
+    const card = t.closest('.icard');
+    if (card) {
+      const it = S.draft.items.find(i => i.key === card.dataset.key); if (!it) return;
+      applyCardChange(t, card, it);
+      saveLocalDraft();
+    }
+  });
+  function applyCardChange(t, card, it) {
+    if (t.dataset.f === 'critical') { it.critical = t.checked; card.classList.toggle('is-crit', t.checked); }
+    else if (t.dataset.f === 'responsible') it.responsible = t.value;
+    else if (t.dataset.cf) { it.fields = it.fields || {}; it.fields[t.dataset.cf] = t.value; }
+    else if (t.dataset.f === 'status') { it.status = t.value; t.className = 'status-sel ' + t.value; }
+    else if (t.dataset.up) { const fs = Array.from(t.files || []); t.value = ''; if (fs.length) addFiles(fs, t.dataset.up); }
+  }
+  function keepFocus(id, fn) {
+    const el = document.getElementById(id), pos = el ? el.selectionStart : null;
+    fn(); const n = document.getElementById(id); if (n) { n.focus(); if (pos != null) n.setSelectionRange(pos, pos); }
+  }
+  ['dragover', 'dragenter'].forEach(ev => document.addEventListener(ev, (e) => { const d = e.target.closest && e.target.closest('[data-drop]'); if (d) { e.preventDefault(); d.classList.add('over'); } }));
+  document.addEventListener('dragleave', (e) => { const d = e.target.closest && e.target.closest('[data-drop]'); if (d && !d.contains(e.relatedTarget)) d.classList.remove('over'); });
+  document.addEventListener('drop', (e) => { const d = e.target.closest && e.target.closest('[data-drop]'); if (!d) return; e.preventDefault(); d.classList.remove('over'); const fs = Array.from(e.dataTransfer.files || []); if (fs.length) addFiles(fs, d.dataset.drop); });
+
+  // ---------- boot ----------
+  (async () => {
+    const use = (n) => (window.claude && window.claude.use) ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+    const [db, user, assets, downloads] = await Promise.all([use('db'), use('user'), use('assets'), use('downloads')]);
+    S.db = db; S.user = user; S.assets = assets; S.downloads = downloads;
+    if (!db) { S.dbMissing = true; renderDash(); return; }
+    if (user) {
+      try { S.uid = await user.id(); } catch (e) {}
+      try { const c = await user.can('data.write'); S.canWrite = c !== false; } catch (e) {}
+      try { S.isEditor = await user.canEdit(); } catch (e) {}
+    }
+    db.doc('settings/app').onSnapshot((snap) => {
+      const p = snap.exists && snap.data().parties;
+      S.parties = Array.isArray(p) ? p.filter(x => typeof x === 'string') : DEFAULT_PARTIES.slice();
+      const pp = snap.exists && snap.data().projectParties;
+      S.partiesByProject = {};
+      if (pp && typeof pp === 'object') Object.entries(pp).forEach(([proj, list]) => { if (Array.isArray(list)) S.partiesByProject[proj] = list.filter(x => typeof x === 'string'); });
+      const rf = snap.exists && snap.data().retiredFields;
+      S.retiredFields = rf && typeof rf === 'object' ? rf : {};
+      const pf = snap.exists && snap.data().projectFields;
+      S.fieldsByProject = {};
+      if (pf && typeof pf === 'object') Object.entries(pf).forEach(([proj, list]) => {
+        if (Array.isArray(list)) S.fieldsByProject[proj] = list.filter(f => f && f.id && f.name).map(f => ({ id: String(f.id), name: String(f.name), type: f.type === 'text' ? 'text' : 'list', options: Array.isArray(f.options) ? f.options.map(String) : [] }));
+      });
+      if (!S.ready || document.querySelector('.overlay')) return;
+      if (S.view === 'dash' && S.tab === 'items') renderItemsTab();
+      else if (S.view === 'detail') renderDetail();
+      else if (S.view === 'form' && !document.activeElement.closest('.icard')) renderItemCards();
+    }, () => {});
+    db.collection('reports').orderBy('createdAt', 'desc').limit(1000).onSnapshot((snap) => {
+      S.reports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      derive();
+      const first = !S.ready; S.ready = true;
+      if (first) $('#newBtn').hidden = !S.canWrite;
+      if (S.view !== 'form') {
+        if (document.querySelector('.overlay')) return;
+        render();
+      }
+    }, () => {
+      app.innerHTML = `<div class="empty"><h3>Reports are unavailable</h3><p>The connection to the report log closed. Reload the page to reconnect.</p></div>`;
+    });
+  })();
+})();
+</script>
+
+</body>
+</html>
