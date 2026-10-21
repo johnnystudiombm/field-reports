@@ -211,6 +211,11 @@ table.rtable td.cf { width: 96px; }
 .it-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .it-ph .tag, .tag { position: absolute; left: 4px; top: 4px; font-family: var(--f-mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: rgba(207, 47, 37, .92); padding: 2px 5px; border-radius: 3px; }
 .it-pdf { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mbm); font-weight: 600; }
+.choice { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border: 1px solid var(--rule-strong); border-radius: 8px; background: var(--sheet); cursor: pointer; color: var(--ink); }
+.choice:hover, .choice:focus-visible { border-color: var(--mbm); background: var(--mbm-soft); }
+.choice .c-main { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.choice .c-sub { font-size: 13px; color: var(--ink-2); }
+.choice .c-go { font-size: 18px; color: var(--mbm); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .later { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
 .later button { background: none; border: 0; padding: 0; color: var(--mbm); text-decoration: underline; cursor: pointer; font-size: 12px; }
@@ -326,7 +331,7 @@ table.rtable td.cf { width: 96px; }
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script>
 // Studio MBM Field Reports: Supabase connection (login, reports, photos, live updates).
@@ -1208,6 +1213,47 @@ table.rtable td.cf { width: 96px; }
     go('form');
   }
 
+  // "New report" menu: start from a project's last report (open items carry over), continue a draft, or start blank.
+  function readLocalDraft() { try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); return d && d.draft ? d : null; } catch (e) { return null; } }
+  function dropLocalDraft() {
+    const d = readLocalDraft();
+    if (d && Array.isArray(d.uploads) && d.uploads.length) discardUploads(d.uploads);
+    clearLocalDraft();
+  }
+  function newReportDialog() {
+    const draft = readLocalDraft();
+    const latest = new Map();
+    S.reports.forEach(r => { if (r.project && !latest.has(r.project)) latest.set(r.project, r); }); // S.reports is newest first
+    if (!latest.size && !draft) { startNew(); return; }
+    const projects = [...latest.values()].sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
+    const carryCount = (project) => { const c = { open: 0, pending: 0 }; S.current.forEach(({ item, report }) => { if (report.project === project) { const st = normStatus(item.status); if (st !== 'closed') c[st]++; } }); return c; };
+    const o = document.createElement('div'); o.className = 'overlay';
+    o.innerHTML = `<div class="dialog wide" role="dialog" aria-modal="true" aria-label="New report">
+      <h4>New field report</h4>
+      ${draft ? `<button class="choice" data-x="draft"><span class="c-main"><b>Continue your unsaved draft</b><span class="c-sub">${esc(draft.draft.project || 'No project yet')} · ${(draft.draft.items || []).length} item${(draft.draft.items || []).length === 1 ? '' : 's'}</span></span><span class="c-go">→</span></button>` : ''}
+      ${projects.length ? `<div class="eyebrow">Based on the last report</div>
+      <div style="display:grid;gap:8px">${projects.map(r => { const c = carryCount(r.project); const n = c.open + c.pending; return `<button class="choice" data-x="project" data-project="${esc(r.project)}">
+        <span class="c-main"><b>${esc(r.project)}${r.projectNo ? ` <span class="muted mono" style="font-weight:400;font-size:13px">${esc(r.projectNo)}</span>` : ''}</b>
+        <span class="c-sub">Last report ${esc(mdy(r.reportDate))} · ${n ? `${c.open} open${c.pending ? `, ${c.pending} pending` : ''} item${n === 1 ? '' : 's'} carry over with their history, photos and columns` : 'no open items to carry over'}</span></span><span class="c-go">→</span></button>`; }).join('')}</div>` : ''}
+      <button class="choice" data-x="blank"><span class="c-main"><b>Blank report</b><span class="c-sub">New project, or start from scratch. Picking an existing project still carries its open items.</span></span><span class="c-go">→</span></button>
+      ${draft ? '<p class="hint" style="margin:0">Starting a new report replaces your unsaved draft.</p>' : ''}
+      <div class="actions"><button class="btn" data-x="cancel">Cancel</button></div>
+    </div>`;
+    const close = () => { o.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    o.addEventListener('click', (e) => {
+      const x = e.target.closest('[data-x]');
+      if (!x) { if (e.target === o) close(); return; }
+      close();
+      if (x.dataset.x === 'draft') startNew();
+      else if (x.dataset.x === 'project') { dropLocalDraft(); startNew(x.dataset.project); }
+      else if (x.dataset.x === 'blank') { dropLocalDraft(); startNew(); }
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(o);
+    const first = $('.choice', o); if (first) first.focus();
+  }
+
   function renderForm() {
     const d = S.draft;
     const projects = projectNames();
@@ -1218,7 +1264,7 @@ table.rtable td.cf { width: 96px; }
       <form class="form" id="rform" novalidate>
         <section class="fs"><h3>Report</h3>
           <div class="grid2">
-            <div class="fld"><label for="p-project">Project <span class="req">*</span></label><input class="input" id="p-project" list="dl-projects" value="${esc(d.project)}" placeholder="e.g. 47 Mercer Penthouse" autocomplete="off"><datalist id="dl-projects">${projects.map(p => `<option value="${esc(p)}">`).join('')}</datalist></div>
+            <div class="fld"><label for="p-project">Project <span class="req">*</span></label><input class="input" id="p-project" list="dl-projects" value="${esc(d.project)}" placeholder="e.g. E 10 St" autocomplete="off"><datalist id="dl-projects">${projects.map(p => `<option value="${esc(p)}">`).join('')}</datalist></div>
             <div class="fld"><label for="p-no">Project no.</label><input class="input mono" id="p-no" value="${esc(d.projectNo)}" placeholder="e.g. 3E10"></div>
             <div class="fld"><label for="p-rdate">Report date <span class="req">*</span></label><input class="input" id="p-rdate" type="date" value="${esc(d.reportDate)}"></div>
             <div class="fld"><label for="p-vdate">Site meeting <span class="req">*</span></label><input class="input" id="p-vdate" type="date" value="${esc(d.visitDate)}"></div>
@@ -1786,7 +1832,7 @@ table.rtable td.cf { width: 96px; }
     else if (a === 'tab') { S.tab = b.dataset.tab; persistFilters(); renderDash(); }
     else if (a === 'ifstatus') { S.itf.status = b.dataset.st; persistFilters(); renderItemsTab(); }
     else if (a === 'item') { if (e.target.closest('select')) return; itemOverlay(b.dataset.key); }
-    else if (a === 'new') startNew();
+    else if (a === 'new') newReportDialog();
     else if (a === 'columns') {
       if (S.view === 'form') collectHead();
       const proj = b.dataset.project || (S.draft && S.draft.project);
