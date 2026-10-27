@@ -61,6 +61,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .brand .div { width: 1px; height: 28px; background: var(--rule-strong); }
 .brand .lbl { font-family: var(--f-display); font-weight: 700; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
 .bar .spacer { flex: 1; }
+.brand .ver { font-size: 11px; font-weight: 600; color: var(--ink-3); border: 1px solid var(--rule-strong); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
 @media (max-width: 520px) { .brand .div, .brand .lbl { display: none; } }
 
 .wrap { max-width: 1360px; margin: 0 auto; padding-block: 20px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -441,6 +442,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       <span id="logo-slot"></span>
       <span class="div" aria-hidden="true"></span>
       <span class="lbl">Field Reports</span>
+      <span class="ver" title="App version">v2.1</span>
     </button>
     <span class="spacer"></span>
   </div>
