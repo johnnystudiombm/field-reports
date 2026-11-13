@@ -427,8 +427,15 @@ table.pp-table tr.pp-row:hover td { background: #f3f5fb; }
 .pp-crit, .pp-crit .rich { color: var(--pp-red); }
 .pp-upd { margin-top: 0; }
 .pp-photos { display: flex; flex-wrap: wrap; gap: 6pt 8pt; margin-top: 4pt; align-items: flex-start; }
-.pp-ph { width: 1in; display: grid; gap: 1pt; font-size: 7pt; }
-.pp-ph img { max-width: 1in; max-height: 1.5in; width: auto; height: auto; display: block; }
+.pp-ph { width: min-content; min-width: 1in; display: grid; gap: 1pt; font-size: 7pt; }
+/* Photo size: the shorter side is 1" (wide photos are 1" tall, tall photos are 1" wide). */
+.pp-ph img { height: 1in; width: auto; max-width: 5.6in; object-fit: contain; display: block; }
+.pp-ph img.pt { width: 1in; height: auto; max-height: 4in; }
+.zoom-ctl { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); padding: 2px; }
+.zoom-ctl button { min-width: 34px; min-height: 32px; border: 0; background: none; border-radius: 6px; font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.zoom-ctl button:hover { background: var(--mbm-soft); }
+.zoom-ctl button.fit { font-size: 13px; font-weight: 600; padding: 0 8px; }
+.zoom-ctl .pct { min-width: 46px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .pp-ph .d { color: var(--pp-grey); font-size: 6.5pt; }
 .pp-foot { display: grid; grid-template-columns: 1fr auto 1fr; font-size: 8.5pt; margin-top: 24pt; }
 .pp-foot .c { text-align: center; } .pp-foot .r { text-align: right; }
@@ -472,7 +479,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       <span id="logo-slot"></span>
       <span class="div" aria-hidden="true"></span>
       <span class="lbl">Field Reports</span>
-      <span class="ver" title="App version">v2.6</span>
+      <span class="ver" title="App version">v2.7</span>
     </button>
     <span class="spacer"></span>
   </div>
@@ -1848,7 +1855,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
               ${it.desc ? `<div class="rich">${sanitizeRich(it.desc)}</div>` : ''}
               ${row.updates.map(u => `<div class="rich pp-upd">${u.date ? esc(mdy(u.date)) + ': ' : ''}${sanitizeRich(u.text)}</div>`).join('')}
               ${row.photos.length ? `<div class="pp-photos">${row.photos.map(p => { if (p.kind === 'pdf') return `<div class="pp-ph"><a href="${blobUrl(p.id)}" target="_blank" rel="noopener" data-stop="1">PDF: ${esc(p.caption || p.name || 'Document')}</a></div>`; k++;
-                return `<div class="pp-ph">${p.caption ? `<span>${esc(p.caption)}</span>` : ''}<img src="${blobUrl(p.id)}" alt="${esc(p.caption || 'Photo')}" data-action="lightbox" data-lb="${esc(lbKey)}" data-k="${k}" style="cursor:zoom-in" onerror="this.style.visibility='hidden'">${p.addedAt ? `<span class="d">Uploaded ${esc(mdy(photoDate(p)))}</span>` : ''}</div>`; }).join('')}</div>` : ''}
+                return `<div class="pp-ph">${p.caption ? `<span>${esc(p.caption)}</span>` : ''}<img src="${blobUrl(p.id)}" alt="${esc(p.caption || 'Photo')}" data-action="lightbox" data-lb="${esc(lbKey)}" data-k="${k}" style="cursor:zoom-in" onload="if(this.naturalHeight>this.naturalWidth)this.classList.add('pt')" onerror="this.style.visibility='hidden'">${p.addedAt ? `<span class="d">Uploaded ${esc(mdy(photoDate(p)))}</span>` : ''}</div>`; }).join('')}</div>` : ''}
             </td></tr>`;
         }).join('') : '<tr><td></td><td></td><td></td><td>No items for this report.</td></tr>'}</tbody>
       </table>
@@ -1885,10 +1892,26 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     document.body.appendChild(o);
     const b = $('#gn-b', o); b.focus();
   }
+  // Report zoom: "Fit" shrinks the page to the window (never past 100%); + and − set a fixed zoom (scroll sideways when wider).
+  const ZOOMS = [0.5, 0.67, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+  function fitScale() { const p = $('#paper'), w = $('.paper-wrap'); if (!p || !w) return 1; const z = p.style.zoom; p.style.zoom = ''; const f = Math.min(1, (w.clientWidth - 2) / p.offsetWidth); p.style.zoom = z; return f; }
+  function curZoom() { const z = Number(S.prefs.rzoom); return z > 0 ? z : fitScale(); }
   function fitPaper() {
-    const p = $('#paper'), w = $('.paper-wrap'); if (!p || !w) return;
-    p.style.zoom = ''; const s = Math.min(1, (w.clientWidth - 2) / p.offsetWidth); p.style.zoom = s < 1 ? String(s) : '';
+    const p = $('#paper'); if (!p) return;
+    const s = curZoom(); p.style.zoom = Math.abs(s - 1) < 0.001 ? '' : String(s);
+    const t = $('#zoom-pct'); if (t) t.textContent = Math.round(s * 100) + '%';
   }
+  function setZoom(dir) {
+    const w = $('.paper-wrap'), cur = curZoom(), cx = w ? (w.scrollLeft + w.clientWidth / 2) / Math.max(1, w.scrollWidth) : 0.5;
+    if (dir === 'fit') S.prefs.rzoom = 0;
+    else { const next = dir > 0 ? ZOOMS.find(z => z > cur + 0.001) : [...ZOOMS].reverse().find(z => z < cur - 0.001); if (!next) return; S.prefs.rzoom = next; }
+    savePrefs(); fitPaper();
+    if (w) w.scrollLeft = cx * w.scrollWidth - w.clientWidth / 2;
+  }
+  document.addEventListener('wheel', (e) => {
+    if (S.view !== 'report' || !(e.ctrlKey || e.metaKey) || !e.target.closest || !e.target.closest('.paper-wrap')) return;
+    e.preventDefault(); setZoom(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
   let resizeT = null;
   window.addEventListener('resize', () => {
     if (S.view === 'report') fitPaper();
@@ -1911,6 +1934,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
         ${S.canWrite ? '<button class="btn" data-action="edit-report">Edit report details</button><button class="btn" data-action="edit-notes">General notes</button>' : ''}
         <button class="btn" data-action="copy">Copy as text</button>
         ${S.canWrite ? '<button class="btn red" data-action="delete-report">Delete report</button>' : ''}
+        <div class="zoom-ctl" role="group" aria-label="Zoom"><button type="button" data-action="zoom" data-z="-1" title="Zoom out" aria-label="Zoom out">−</button><span class="pct" id="zoom-pct" aria-live="polite">100%</span><button type="button" data-action="zoom" data-z="1" title="Zoom in" aria-label="Zoom in">+</button><button type="button" class="fit" data-action="zoom" data-z="fit" title="Fit the page to the window">Fit</button></div>
       </div>
       ${S.canWrite ? `<div class="rep-tools">
         <label for="rep-sort">Sort by <select class="input" id="rep-sort">${REPORT_SORTS.map(([k, l]) => `<option value="${k}" ${k === (r.sortMode || 'serial') ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
@@ -2184,7 +2208,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     const W = 612, H = 792, M = 72, TOP = 72, BOTTOM = H - 64;
     const INK = [0, 0, 0], RED = [204, 0, 0], GREY = [85, 85, 85];
     const COLS = [M, M + 22, M + 70, M + 130, W - M]; // # | Serial | Status | Description
-    const PAD = 4, FS = 9, LH = 10.6, PH = 72, PH_MAXH = 108, PH_GAP = 8;
+    const PAD = 4, FS = 9, LH = 10.6, PH = 72, PH_MAXH = 288, PH_GAP = 8;
     let y = TOP;
     const header = () => {
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...INK);
@@ -2280,7 +2304,6 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     y += hh;
     if (!R.items.length) { frame(y, y + 20); doc.setFont('helvetica', 'normal'); doc.text('No items for this report.', cellX, y + 13); y += 20; }
 
-    const perRow = Math.max(1, Math.floor((cellW + PH_GAP) / (PH + PH_GAP)));
     R.items.forEach(it => {
       const dc = it.critical ? RED : INK;
       const blocks = [];
@@ -2299,14 +2322,17 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
         wrapRuns(lines, cellW, FS).forEach(l => blocks.push({ kind: 'line', line: l, color: dc, h: LH }));
       });
       const imgs = (it.photos || []).filter(p => p.data), docs = (it.photos || []).filter(p => !p.data);
-      for (let i = 0; i < imgs.length; i += perRow) {
-        const row = imgs.slice(i, i + perRow).map(p => {
-          const s = Math.min(PH / p.w, PH_MAXH / p.h), iw = p.w * s, ih = p.h * s;
-          const cap = p.caption ? wrapRuns(plain(p.caption), PH, 7).slice(0, 2) : [];
-          return { ...p, iw, ih, cap, h: cap.length * 8 + ih + (p.dateText ? 9 : 0) };
-        });
-        blocks.push({ kind: 'photos', row, h: Math.max(...row.map(p => p.h)) + 6 });
-      }
+      // Shorter side 1" (72pt): wide photos 1" tall, tall photos 1" wide. Rows wrap to the column width.
+      let row = [], rowW = 0;
+      const flush = () => { if (row.length) blocks.push({ kind: 'photos', row, h: Math.max(...row.map(p => p.h)) + 6 }); row = []; rowW = 0; };
+      imgs.forEach(p => {
+        const s = Math.min(Math.max(PH / p.w, PH / p.h), cellW / p.w, PH_MAXH / p.h), iw = p.w * s, ih = p.h * s, bw = Math.max(iw, PH);
+        const cap = p.caption ? wrapRuns(plain(p.caption), bw, 7).slice(0, 2) : [];
+        if (row.length && rowW + PH_GAP + bw > cellW) flush();
+        rowW += (row.length ? PH_GAP : 0) + bw;
+        row.push({ ...p, iw, ih, bw, cap, h: cap.length * 8 + ih + (p.dateText ? 9 : 0) });
+      });
+      flush();
       docs.forEach(p => blocks.push({ kind: 'line', line: wrapRuns(plain('Attachment: ' + (p.caption || p.pdfName || 'document')), cellW, FS)[0], color: GREY, h: LH }));
       if (!blocks.length) blocks.push({ kind: 'line', line: [], color: INK, h: LH });
 
@@ -2330,7 +2356,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
             p.cap.forEach(l => { drawLine(l, x, py + 6, 7, INK); py += 8; });
             doc.addImage(p.data, 'JPEG', x, py, p.iw, p.ih, undefined, 'FAST'); py += p.ih;
             if (p.dateText) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...GREY); doc.text(p.dateText, x, py + 7); }
-            x += PH + PH_GAP;
+            x += p.bw + PH_GAP;
           });
           y += b.h;
         }
@@ -2364,7 +2390,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
   async function loadForPdf(id) {
     const img = await new Promise((res) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null); im.src = blobUrl(id); });
     if (!img || !img.naturalWidth) return null;
-    const s = Math.min(1, 360 / img.naturalWidth, 540 / img.naturalHeight);
+    const s = Math.min(1, 320 / Math.min(img.naturalWidth, img.naturalHeight), 1600 / Math.max(img.naturalWidth, img.naturalHeight));
     const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
     const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
     return { data: c.toDataURL('image/jpeg', 0.85), w: c.width, h: c.height };
@@ -2529,6 +2555,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     else if (a === 'mv-row' && r) moveRow(r, b.dataset.item, Number(b.dataset.d));
     else if (a === 'add-items' && r) addItemsDialog(r);
     else if (a === 'refresh-report' && r) refreshReport(r);
+    else if (a === 'zoom') setZoom(b.dataset.z === 'fit' ? 'fit' : Number(b.dataset.z));
     else if (a === 'show-row' && r) setExcluded(r, b.dataset.item, false);
     else if (a === 'lightbox') lightbox(S.lb[b.dataset.lb], +b.dataset.k);
     else if (a === 'cancel-item') cancelItem();
