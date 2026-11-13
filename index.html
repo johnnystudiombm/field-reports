@@ -334,7 +334,8 @@ table.grid tbody tr { cursor: pointer; }
 table.grid tbody tr:hover td { background: var(--sheet-2); }
 table.grid tbody tr:last-child td { border-bottom: 0; }
 table.grid tbody tr.closed-row td { color: var(--ink-3); }
-.g-num { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.g-num { font-weight: 700; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.g-idx { font-weight: 600; font-size: 14px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .g-title { font-weight: 700; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; }
 .g-desc { color: var(--ink-2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
 .g-ph { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-start; }
@@ -416,7 +417,8 @@ table.pp-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 table.pp-table th, table.pp-table td { border: 0.6pt solid var(--pp-ink); padding: 4pt; vertical-align: top; text-align: left; }
 table.pp-table th { font-weight: 700; }
 table.pp-table td.c-n, table.pp-table td.c-s { font-weight: 700; }
-table.pp-table td.c-n { text-align: left; }
+table.pp-table td.c-n { text-align: center; }
+table.pp-table td.c-sn { white-space: nowrap; font-size: 8.5pt; }
 table.pp-table tr.pp-row { cursor: pointer; }
 table.pp-table tr.pp-row:hover td { background: #f3f5fb; }
 .pp-top { display: flex; justify-content: space-between; gap: 8pt; font-size: 8.5pt; margin-bottom: 2pt; }
@@ -457,7 +459,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       <span id="logo-slot"></span>
       <span class="div" aria-hidden="true"></span>
       <span class="lbl">Field Reports</span>
-      <span class="ver" title="App version">v2.3</span>
+      <span class="ver" title="App version">v2.4</span>
     </button>
     <span class="spacer"></span>
   </div>
@@ -977,11 +979,12 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
   }
 
   // ---------- projects: levels, rooms, responsible parties, custom columns ----------
-  const defaultCfg = () => ({ projectNo: '', levels: [], rooms: [], parties: [{ trade: 'Designer', name: 'Studio MBM' }], fields: [] });
+  const defaultCfg = () => ({ projectNo: '', serialPrefix: 'FR-', levels: [], rooms: [], parties: [{ trade: 'Designer', name: 'Studio MBM' }], fields: [] });
   function normCfg(c) {
     c = c || {};
     return {
       projectNo: str(c.projectNo),
+      serialPrefix: c.serialPrefix == null ? 'FR-' : String(c.serialPrefix).trim(),
       levels: uniq(arr(c.levels).map(str).filter(Boolean)),
       rooms: arr(c.rooms).map(r => Array.isArray(r) ? { level: str(r[0]), number: str(r[1]), name: str(r[2]) } : { level: str(r && r.level), number: str(r && r.number), name: str(r && r.name) }).filter(r => r.number || r.name),
       parties: arr(c.parties).map(p => Array.isArray(p) ? { trade: str(p[0]), name: str(p[1]) } : typeof p === 'string' ? { trade: '', name: str(p) } : { trade: str(p && p.trade), name: str(p && p.name) }).filter(p => p.name),
@@ -1044,6 +1047,8 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       excluded: arr(d.excluded).map(String), _old: !d.legacyItems && Array.isArray(d.items) && d.items.length ? d.items : null, _raw: d
     };
   }
+  // Serial number: a permanent ID per item (e.g. FR-001). The "#" column is just the row position.
+  const serialOf = (it) => it && it.num ? projCfg(it.project).serialPrefix + String(it.num).padStart(3, '0') : '';
   const nextNum = (project) => S.items.filter(i => i.project === project).reduce((m, i) => Math.max(m, i.num || 0), 0) + 1;
   const siteOf = (r) => r.visitDate || r.reportDate || '';
   const reportTitle = (r) => mdy(r.reportDate) + ' Field Report';
@@ -1125,13 +1130,14 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
   function itemColumns() {
     const P = S.prefs.project;
     const cols = [
-      { key: 'num', label: '#', w: 56 },
-      { key: 'item', label: 'Item', w: 330 },
+      { key: 'idx', label: '#', w: 40, nosort: true },
+      { key: 'num', label: 'Serial', w: 76 },
+      { key: 'item', label: 'Item', w: 320 },
     ];
     if (!P) cols.push({ key: 'project', label: 'Project', w: 120 });
-    cols.push({ key: 'level', label: 'Level', w: 112 }, { key: 'room', label: 'Room', w: 176 }, { key: 'parties', label: 'Responsible', w: 180 });
+    cols.push({ key: 'level', label: 'Level', w: 108 }, { key: 'room', label: 'Room', w: 170 }, { key: 'parties', label: 'Responsible', w: 170 });
     (P ? projCfg(P).fields : []).forEach(f => cols.push({ key: 'cf:' + f.id, label: f.name, w: 120, field: f }));
-    cols.push({ key: 'photos', label: 'Photos', w: 196 }, { key: 'created', label: 'Created', w: 100 }, { key: 'updated', label: 'Updated', w: 100 }, { key: 'status', label: 'Status', w: 106 });
+    cols.push({ key: 'photos', label: 'Photos', w: 136 }, { key: 'created', label: 'Created', w: 96 }, { key: 'updated', label: 'Updated', w: 96 }, { key: 'status', label: 'Status', w: 104 });
     cols.forEach(c => { const w = Number(S.prefs.colw[c.key]); if (w >= 40) c.w = w; });
     return cols;
   }
@@ -1146,7 +1152,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       if (f.critical && !it.critical) return false;
       if (f.project) for (const [fid, want] of Object.entries(f.cf || {})) { if (want && (it.fields || {})[fid] !== want) return false; }
       if (!q) return true;
-      return [it.title, richToPlain(it.desc), it.level, roomLabel(it.project, it.room), partiesText(it), it.project, '#' + it.num, ...Object.values(it.fields || {}), ...it.updates.map(u => richToPlain(u.text))].join(' ').toLowerCase().includes(q);
+      return [it.title, richToPlain(it.desc), it.level, roomLabel(it.project, it.room), partiesText(it), it.project, serialOf(it), ...Object.values(it.fields || {}), ...it.updates.map(u => richToPlain(u.text))].join(' ').toLowerCase().includes(q);
     });
     const { key, dir } = S.prefs.sort;
     const val = (it) => key === 'num' ? (it.num || 9999) : key === 'item' ? it.title : key === 'project' ? it.project : key === 'level' ? levelIdx(it.project, it.level) * 1000 + (it.level ? 0 : 999)
@@ -1163,7 +1169,8 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
   function cellHTML(c, it) {
     const cfg = projCfg(it.project);
     switch (c.key) {
-      case 'num': return `<span class="g-num">${it.num ? pad2(it.num) : '—'}</span>`;
+      case 'idx': return `<span class="g-idx">${c.idx}</span>`;
+      case 'num': return `<span class="g-num">${esc(serialOf(it) || '—')}</span>`;
       case 'item': {
         const last = it.updates.filter(u => (u.text || '').trim()).sort((a, b) => (a.date || '').localeCompare(b.date || '')).slice(-1)[0];
         return `<div class="g-title">${esc(it.title || 'Untitled item')}${it.critical ? ' <span class="pill crit">Critical</span>' : ''}</div><div class="g-desc ${it.critical ? 'crit' : ''}">${esc(richToPlain(it.desc))}</div>${last ? `<div class="g-upd"><b>${esc(mdy(last.date))}</b> ${esc(richToPlain(last.text))}</div>` : ''}`;
@@ -1176,7 +1183,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
         if (!it.photos.length) return '<span class="g-muted">—</span>';
         const imgs = it.photos.filter(p => p.kind !== 'pdf'), pdfs = it.photos.length - imgs.length, key = 'g-' + it.id, MAX = 6;
         S.lb[key] = imgs;
-        return `<div class="g-ph">${imgs.slice(0, MAX).map((p, k) => `<button type="button" class="g-th" data-action="lightbox" data-lb="${esc(key)}" data-k="${k}" title="${esc([p.caption, photoWhen(p)].filter(Boolean).join(' · ') || 'View photo')}" aria-label="View photo ${k + 1} of item ${esc(it.num || '')}"><img src="${blobUrl(p.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">${p.original ? '<i class="g-mk" title="Marked up"></i>' : ''}</button>`).join('')}${imgs.length > MAX ? `<button type="button" class="g-th more" data-action="lightbox" data-lb="${esc(key)}" data-k="${MAX}" aria-label="View more photos">+${imgs.length - MAX}</button>` : ''}${pdfs ? `<span class="g-pdf">${pdfs} PDF</span>` : ''}</div>`;
+        return `<div class="g-ph">${imgs.slice(0, MAX).map((p, k) => `<button type="button" class="g-th" data-action="lightbox" data-lb="${esc(key)}" data-k="${k}" title="${esc([p.caption, photoWhen(p)].filter(Boolean).join(' · ') || 'View photo')}" aria-label="View photo ${k + 1} of ${esc(serialOf(it))}"><img src="${blobUrl(p.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">${p.original ? '<i class="g-mk" title="Marked up"></i>' : ''}</button>`).join('')}${imgs.length > MAX ? `<button type="button" class="g-th more" data-action="lightbox" data-lb="${esc(key)}" data-k="${MAX}" aria-label="View more photos">+${imgs.length - MAX}</button>` : ''}${pdfs ? `<span class="g-pdf">${pdfs} PDF</span>` : ''}</div>`;
       }
       case 'created': return `<span class="mono">${esc(mdy(dateOf(it.createdAt)) || '—')}</span>`;
       case 'updated': return `<span class="mono">${esc(mdy(dateOf(it.updatedAt)) || '—')}</span>`;
@@ -1232,8 +1239,8 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
         : !list.length ? `<div class="empty"><h3>No items here</h3><p>No ${S.prefs.status === 'all' ? '' : STATUS[S.prefs.status].toLowerCase() + ' '}items match these filters.</p><button class="btn" data-action="clear-filters">Clear filters</button></div>`
         : `<div class="grid-wrap"><table class="grid" id="items-grid" style="width:${total}px">
           <colgroup>${cols.map(c => `<col data-col="${esc(c.key)}" style="width:${c.w}px">`).join('')}</colgroup>
-          <thead><tr>${cols.map(c => `<th scope="col"><div class="th-in" data-sort="${esc(c.key)}" title="Sort by ${esc(c.label)}">${esc(c.label)} ${ar(c.key)}</div><span class="rs" data-resize="${esc(c.key)}" title="Drag to resize. Double-click to reset."></span></th>`).join('')}</tr></thead>
-          <tbody>${list.map(it => `<tr data-item="${esc(it.id)}" tabindex="0" class="${it.status === 'closed' ? 'closed-row' : ''}">${cols.map(c => `<td>${cellHTML(c, it)}</td>`).join('')}</tr>`).join('')}</tbody>
+          <thead><tr>${cols.map(c => `<th scope="col"><div class="th-in" ${c.nosort ? 'title="Row number"' : `data-sort="${esc(c.key)}" title="Sort by ${esc(c.label)}"`}>${esc(c.label)} ${c.nosort ? '' : ar(c.key)}</div><span class="rs" data-resize="${esc(c.key)}" title="Drag to resize. Double-click to reset."></span></th>`).join('')}</tr></thead>
+          <tbody>${list.map((it, ri) => `<tr data-item="${esc(it.id)}" tabindex="0" class="${it.status === 'closed' ? 'closed-row' : ''}">${cols.map(c => `<td>${cellHTML(c.key === 'idx' ? { ...c, idx: ri + 1 } : c, it)}</td>`).join('')}</tr>`).join('')}</tbody>
         </table></div>
         <div class="grid-foot"><span class="hint">${list.length} item${list.length === 1 ? '' : 's'} · Click an item to edit it. Drag a column edge to resize, click a header to sort.</span>${Object.keys(S.prefs.colw).length ? '<button class="btn sm ghost" data-action="reset-cols">Reset column widths</button>' : ''}</div>`}`;
   }
@@ -1380,7 +1387,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     app.innerHTML = `
       <button class="btn ghost back" data-action="cancel-item">${backLbl}</button>
       <div class="ed-head">
-        <div><div class="eyebrow">${esc(d.project || 'New item')}${projCfg(d.project).projectNo ? ' · ' + esc(projCfg(d.project).projectNo) : ''}</div><h2>${S.draftIsNew ? 'New item' : 'Item ' + (d.num ? pad2(d.num) : '')}</h2></div>
+        <div><div class="eyebrow">${esc(d.project || 'New item')}${projCfg(d.project).projectNo ? ' · ' + esc(projCfg(d.project).projectNo) : ''}</div><h2>${S.draftIsNew ? 'New item' : esc(serialOf(d) || 'Item')}</h2></div>
         <span class="sp"></span>
         <label class="check"><input type="checkbox" id="e-crit" ${d.critical ? 'checked' : ''} ${ro ? 'disabled' : ''}> Critical (prints in red)</label>
         <select class="status-sel ${d.status}" id="e-status" aria-label="Status" ${ro ? 'disabled' : ''}><option value="open" ${d.status === 'open' ? 'selected' : ''}>Open</option><option value="closed" ${d.status === 'closed' ? 'selected' : ''}>Closed</option></select>
@@ -1390,7 +1397,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
         <section class="fs"><h3>Details</h3>
           <div class="grid2">
             <div class="fld"><label for="e-project">Project <span class="req">*</span></label><input class="input" id="e-project" list="dl-projects" value="${esc(d.project)}" placeholder="e.g. E 10 St" autocomplete="off"><datalist id="dl-projects">${names.map(p => `<option value="${esc(p)}">`).join('')}</datalist></div>
-            <div class="fld"><label for="e-num">Item #</label><input class="input" id="e-num" type="number" min="1" step="1" value="${esc(d.num || '')}"></div>
+            <div class="fld"><label for="e-num">Serial number</label><div style="display:flex;align-items:center;gap:6px"><span class="mono" id="e-sp" style="font-weight:700">${esc(projCfg(d.project).serialPrefix)}</span><input class="input" id="e-num" type="number" min="1" step="1" value="${esc(d.num || '')}" style="max-width:140px"></div><span class="hint" id="e-num-hint">Permanent ID for this item. Reports number rows 1, 2, 3… separately.</span></div>
             <div class="fld" style="grid-column: 1 / -1"><label for="e-title">Heading</label><input class="input" id="e-title" value="${esc(d.title)}" placeholder="e.g. L4 Kids Room 2 Diffuser"></div>
           </div>
           <div class="grid2" id="e-loc">
@@ -1450,6 +1457,12 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     if (!d.createdAt) d.createdAt = nowLocal();
     if (d.status === 'closed' && !d.closedAt) d.closedAt = nowLocal();
     if (!d.num) d.num = nextNum(d.project);
+    const clash = S.items.find(i => i.id !== d.id && i.project === d.project && i.num === d.num);
+    if (clash) {
+      toast(`${serialOf(d)} is already used by "${clash.title || 'another item'}". Pick another number (next free: ${projCfg(d.project).serialPrefix}${String(nextNum(d.project)).padStart(3, '0')}).`);
+      if (btn) { btn.disabled = false; btn.textContent = S.draftIsNew ? 'Add item' : 'Save changes'; }
+      const n = $('#e-num'); if (n) n.focus(); return;
+    }
     try {
       await S.db.collection('items').doc(d.id).set(itemBody(d));
       const kept = new Set(); d.photos.forEach(p => { kept.add(p.id); if (p.original) kept.add(p.original); });
@@ -1462,7 +1475,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
   }
   async function deleteItem() {
     const d = S.draft;
-    const ok = await confirmBox('Delete this item?', `Item ${d.num ? pad2(d.num) : ''} ${d.title ? '"' + d.title + '"' : ''} and its photos will be removed for everyone, including from past reports. This can't be undone.`, 'Delete item');
+    const ok = await confirmBox('Delete this item?', `${serialOf(d) || 'This item'} ${d.title ? '"' + d.title + '"' : ''} and its photos will be removed for everyone, including from past reports. This can't be undone.`, 'Delete item');
     if (!ok) return;
     try {
       await S.db.collection('items').doc(d.id).delete();
@@ -1684,14 +1697,15 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       <p class="pp-disc">${esc(DISCLAIMER)}</p>
       <div class="pp-legend"><p>Items requiring correction/action in the field are in <b>bold</b>.</p><p>Critical items are in <span class="pp-red">red</span>.</p><p>Items from previous Field Reports marked CLOSED are removed from subsequent Field Reports.</p></div>
       ${notesBoxHTML(r)}
-      <table class="pp-table"><colgroup><col style="width:26pt"><col style="width:70pt"><col></colgroup>
-        <thead><tr><th style="text-align:center">#</th><th>Status</th><th>Date/Description/Photo</th></tr></thead>
-        <tbody>${rows.length ? rows.map(row => {
+      <table class="pp-table"><colgroup><col style="width:22pt"><col style="width:48pt"><col style="width:60pt"><col></colgroup>
+        <thead><tr><th style="text-align:center">#</th><th>Serial</th><th>Status</th><th>Date/Description/Photo</th></tr></thead>
+        <tbody>${rows.length ? rows.map((row, ri) => {
           const it = row.item, lbKey = 'r-' + it.id; S.lb[lbKey] = row.photos.filter(p => p.kind !== 'pdf');
           const loc = locationText(it), who = partiesText(it);
           let k = -1;
           return `<tr class="pp-row ${it.critical ? 'pp-crit' : ''}" data-action="open-item" data-item="${esc(it.id)}" title="Click to edit this item">
-            <td class="c-n">${esc(it.num || '')}${S.canWrite ? `<button class="pp-hide" data-action="hide-row" data-item="${esc(it.id)}">Hide</button>` : ''}</td>
+            <td class="c-n">${ri + 1}${S.canWrite ? `<button class="pp-hide" data-action="hide-row" data-item="${esc(it.id)}">Hide</button>` : ''}</td>
+            <td class="c-sn">${esc(serialOf(it))}</td>
             <td class="c-s">${row.status === 'closed' ? 'CLOSED' : 'OPEN'}</td>
             <td>${loc || who ? `<div class="pp-top"><span class="l">${esc(loc)}</span><span class="r">${esc(who)}</span></div>` : ''}
               ${it.title ? `<div class="pp-head">${esc(it.title)}</div>` : ''}
@@ -1700,7 +1714,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
               ${row.photos.length ? `<div class="pp-photos">${row.photos.map(p => { if (p.kind === 'pdf') return `<div class="pp-ph"><a href="${blobUrl(p.id)}" target="_blank" rel="noopener" data-stop="1">PDF: ${esc(p.caption || p.name || 'Document')}</a></div>`; k++;
                 return `<div class="pp-ph">${p.caption ? `<span>${esc(p.caption)}</span>` : ''}<img src="${blobUrl(p.id)}" alt="${esc(p.caption || 'Photo')}" data-action="lightbox" data-lb="${esc(lbKey)}" data-k="${k}" style="cursor:zoom-in" onerror="this.style.visibility='hidden'">${p.addedAt ? `<span class="d">Uploaded ${esc(mdy(photoDate(p)))}</span>` : ''}</div>`; }).join('')}</div>` : ''}
             </td></tr>`;
-        }).join('') : '<tr><td></td><td></td><td>No items for this report.</td></tr>'}</tbody>
+        }).join('') : '<tr><td></td><td></td><td></td><td>No items for this report.</td></tr>'}</tbody>
       </table>
       <div class="pp-foot"><span>Project: <b>${esc(r.project)}</b></span><span class="c">Field Report</span><span class="r"></span></div>
     </div>`;
@@ -1760,7 +1774,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
         ${S.canWrite ? '<button class="btn red" data-action="delete-report">Delete report</button>' : ''}
       </div>
       <div class="paper-wrap">${reportPaperHTML(r, shown)}</div>
-      ${hidden.length ? `<div class="notice hidden-list"><span><b>Hidden from this report:</b> ${hidden.map(h => `Item ${esc(h.item.num || '')} ${esc(h.item.title || '')}`).join(', ')}</span>${S.canWrite ? hidden.map(h => `<button class="btn sm" data-action="show-row" data-item="${esc(h.item.id)}">Show item ${esc(h.item.num || '')}</button>`).join('') : ''}</div>` : ''}`;
+      ${hidden.length ? `<div class="notice hidden-list"><span><b>Hidden from this report:</b> ${hidden.map(h => `${esc(serialOf(h.item))} ${esc(h.item.title || '')}`).join(', ')}</span>${S.canWrite ? hidden.map(h => `<button class="btn sm" data-action="show-row" data-item="${esc(h.item.id)}">Show ${esc(serialOf(h.item))}</button>`).join('') : ''}</div>` : ''}`;
     requestAnimationFrame(fitPaper);
   }
   async function setExcluded(r, id, hide) {
@@ -1821,8 +1835,8 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
   function reportText(r) {
     const L = [reportTitle(r), `Project: ${r.project}${projCfg(r.project).projectNo ? ' (' + projCfg(r.project).projectNo + ')' : ''}`, `Date: ${longDate(r.reportDate)}`, `Site Meeting: ${longDate(siteOf(r))}`, `Revision: ${r.revision || 'n/a'}`, ''];
     if (hasNotes(r)) L.push((r.notesTitle || 'General Notes').toUpperCase(), richToPlain(r.notes).trim(), '');
-    reportRows(r).forEach(({ item: i, status, updates }) => {
-      L.push(`${i.num || '-'}. [${status.toUpperCase()}] ${i.title || ''}${i.critical ? ' (CRITICAL)' : ''}`);
+    reportRows(r).forEach(({ item: i, status, updates }, ri) => {
+      L.push(`${ri + 1}. ${serialOf(i)} [${status.toUpperCase()}] ${i.title || ''}${i.critical ? ' (CRITICAL)' : ''}`);
       const meta = [locationText(i), partiesText(i) ? 'Responsible: ' + partiesText(i) : ''].filter(Boolean);
       if (meta.length) L.push(meta.join(' | '));
       if (i.desc) L.push(richToPlain(i.desc));
@@ -1846,7 +1860,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
   function projectSettings(project) {
     const cfg = projCfg(project);
     const W = {
-      projectNo: cfg.projectNo,
+      projectNo: cfg.projectNo, serialPrefix: cfg.serialPrefix,
       levels: cfg.levels.map(l => ({ orig: l, name: l })),
       rooms: cfg.rooms.map(r => ({ orig: roomKey(r), level: r.level, number: r.number, name: r.name })),
       parties: cfg.parties.map(p => ({ orig: p.name, trade: p.trade, name: p.name })),
@@ -1856,7 +1870,8 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     const o = document.createElement('div'); o.className = 'overlay';
     const levelNames = () => W.levels.filter(l => !l.removed && str(l.name)).map(l => str(l.name));
     const sec = () => {
-      if (tab === 'general') return `<div class="fld"><label for="ps-no">Project number</label><input class="input" id="ps-no" value="${esc(W.projectNo)}" placeholder="e.g. 3E10"><span class="hint">Used in the PDF file name and footer.</span></div>`;
+      if (tab === 'general') return `<div class="fld"><label for="ps-no">Project number</label><input class="input" id="ps-no" value="${esc(W.projectNo)}" placeholder="e.g. 3E10"><span class="hint">Used in the PDF file name.</span></div>
+        <div class="fld"><label for="ps-sp">Serial number prefix</label><input class="input" id="ps-sp" value="${esc(W.serialPrefix)}" placeholder="FR-" style="max-width:200px"><span class="hint">Item serials read as ${esc((W.serialPrefix || '') + '001')}, ${esc((W.serialPrefix || '') + '002')}… The number part stays with each item; changing the prefix renames all of this project's serials.</span></div>`;
       if (tab === 'levels') return `<div class="ps-rows">${W.levels.map((l, i) => l.removed ? '' : `<div class="ps-row lv"><input class="input" data-w="levels" data-i="${i}" data-k="name" value="${esc(l.name)}" aria-label="Level name"><button type="button" class="icon-btn" data-x="up" data-list="levels" data-i="${i}" aria-label="Move up">↑</button><button type="button" class="icon-btn" data-x="down" data-list="levels" data-i="${i}" aria-label="Move down">↓</button><button type="button" class="icon-btn" data-x="rm" data-list="levels" data-i="${i}" aria-label="Remove level">${ICON_TRASH}</button></div>`).join('') || '<p class="hint">No levels yet.</p>'}</div><div><button type="button" class="btn sm" data-x="add" data-list="levels">+ Add level</button></div><p class="hint" style="margin:0">The order here is the order in dropdowns and sorting. Renaming a level updates the items on it.</p>`;
       if (tab === 'rooms') { const lv = levelNames();
         return `<div class="toolbar" style="margin:0"><select class="input" id="ps-rf" aria-label="Show rooms on level" style="flex:0 1 220px"><option value="">All levels</option>${lv.map(l => `<option ${l === roomFilter ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><span class="hint">${W.rooms.filter(r => !r.removed).length} rooms</span></div>
@@ -1875,7 +1890,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
         </div>`).join('') || '<p class="hint">No extra columns.</p>'}</div>
         <div><button type="button" class="btn sm" data-x="add" data-list="fields">+ Add column</button></div>`;
     };
-    const tabs = [['levels', 'Levels'], ['rooms', 'Rooms'], ['parties', 'Responsible parties'], ['fields', 'Extra columns'], ['general', 'Project number']];
+    const tabs = [['levels', 'Levels'], ['rooms', 'Rooms'], ['parties', 'Responsible parties'], ['fields', 'Extra columns'], ['general', 'Project number & serials']];
     const draw = () => {
       o.innerHTML = `<div class="dialog xwide" role="dialog" aria-modal="true">
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;justify-content:space-between"><div><div class="eyebrow">${esc(project)}</div><h4>Project settings</h4></div>
@@ -1887,7 +1902,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     };
     const close = () => { o.remove(); document.removeEventListener('keydown', onKey); render(); };
     const onKey = (e) => { if (e.key === 'Escape') close(); };
-    o.addEventListener('input', (e) => { const t = e.target; if (t.dataset.w) W[t.dataset.w][+t.dataset.i][t.dataset.k] = t.value; else if (t.id === 'ps-no') W.projectNo = t.value; });
+    o.addEventListener('input', (e) => { const t = e.target; if (t.dataset.w) W[t.dataset.w][+t.dataset.i][t.dataset.k] = t.value; else if (t.id === 'ps-no') W.projectNo = t.value; else if (t.id === 'ps-sp') { W.serialPrefix = t.value; const h = t.nextElementSibling; if (h) h.textContent = `Item serials read as ${t.value}001, ${t.value}002… The number part stays with each item; changing the prefix renames all of this project's serials.`; } });
     o.addEventListener('change', async (e) => {
       const t = e.target;
       if (t.dataset.w) { W[t.dataset.w][+t.dataset.i][t.dataset.k] = t.value; if (t.dataset.k === 'type') { draw(); } return; }
@@ -1931,7 +1946,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
         const ptRen = W.parties.filter(p => !p.removed && p.orig && str(p.name) && str(p.name) !== p.orig).map(p => [p.orig, str(p.name)]);
         x.disabled = true; x.textContent = 'Saving…';
         try {
-          const all = { ...S.projects, [project]: { projectNo: str(W.projectNo), levels, rooms, parties, fields } };
+          const all = { ...S.projects, [project]: { projectNo: str(W.projectNo), serialPrefix: String(W.serialPrefix || '').trim(), levels, rooms, parties, fields } };
           await saveSettings({ projects: all, schema: Math.max(S.schema, 2) });
           S.projects = all;
           for (const it of S.items.filter(i2 => i2.project === project)) {
@@ -1975,7 +1990,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     const doc = new JsPDF({ unit: 'pt', format: 'letter', compress: true });
     const W = 612, H = 792, M = 72, TOP = 72, BOTTOM = H - 64;
     const INK = [0, 0, 0], RED = [204, 0, 0], GREY = [85, 85, 85];
-    const COLS = [M, M + 26, M + 96, W - M];
+    const COLS = [M, M + 22, M + 70, M + 130, W - M]; // # | Serial | Status | Description
     const PAD = 4, FS = 9, LH = 10.6, PH = 72, PH_MAXH = 108, PH_GAP = 8;
     let y = TOP;
     const header = () => {
@@ -2063,12 +2078,12 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     y += 22;
 
     // ---- items table ----
-    const cellX = COLS[2] + PAD, cellW = COLS[3] - COLS[2] - 2 * PAD;
-    const frame = (top, bottom) => { doc.setDrawColor(...INK); doc.setLineWidth(0.6); for (let i = 0; i < 3; i++) doc.rect(COLS[i], top, COLS[i + 1] - COLS[i], bottom - top); };
+    const cellX = COLS[3] + PAD, cellW = COLS[4] - COLS[3] - 2 * PAD;
+    const frame = (top, bottom) => { doc.setDrawColor(...INK); doc.setLineWidth(0.6); for (let i = 0; i < 4; i++) doc.rect(COLS[i], top, COLS[i + 1] - COLS[i], bottom - top); };
     const hh = 13; if (y + hh + 40 > BOTTOM) newPage();
     frame(y, y + hh);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(FS); doc.setTextColor(...INK);
-    doc.text('#', (COLS[0] + COLS[1]) / 2, y + 9.5, { align: 'center' }); doc.text('Status', COLS[1] + PAD, y + 9.5); doc.text('Date/Description/Photo', COLS[2] + PAD, y + 9.5);
+    doc.text('#', (COLS[0] + COLS[1]) / 2, y + 9.5, { align: 'center' }); doc.text('Serial', COLS[1] + PAD, y + 9.5); doc.text('Status', COLS[2] + PAD, y + 9.5); doc.text('Date/Description/Photo', COLS[3] + PAD, y + 9.5);
     y += hh;
     if (!R.items.length) { frame(y, y + 20); doc.setFont('helvetica', 'normal'); doc.text('No items for this report.', cellX, y + 13); y += 20; }
 
@@ -2106,8 +2121,9 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       let segTop = y;
       const labels = () => {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(FS); doc.setTextColor(...INK);
-        doc.text(String(it.num || ''), COLS[0] + PAD, segTop + PAD + 7.6);
-        doc.text(String(it.statusLabel || '').toUpperCase(), COLS[1] + PAD, segTop + PAD + 7.6);
+        doc.text(String(it.idx || ''), (COLS[0] + COLS[1]) / 2, segTop + PAD + 7.6, { align: 'center' });
+        doc.text(String(it.statusLabel || '').toUpperCase(), COLS[2] + PAD, segTop + PAD + 7.6);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.text(String(it.serial || ''), COLS[1] + PAD, segTop + PAD + 7.6);
       };
       labels(); y += PAD;
       blocks.forEach(b => {
@@ -2180,7 +2196,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
           done++; $('#pg-t', o).textContent = `Preparing photos (${done} of ${total})…`; $('#pg-b', o).style.width = Math.round(done / Math.max(1, total) * 100) + '%';
           if (im) photos.push({ caption: p.caption, dateText: p.addedAt ? 'Uploaded ' + mdy(photoDate(p)) : '', ...im });
         }
-        R.items.push({ num: it.num, statusLabel: row.status === 'closed' ? 'Closed' : 'Open', critical: it.critical, loc: locationText(it), parties: partiesText(it), title: it.title,
+        R.items.push({ idx: R.items.length + 1, serial: serialOf(it), statusLabel: row.status === 'closed' ? 'Closed' : 'Open', critical: it.critical, loc: locationText(it), parties: partiesText(it), title: it.title,
           lines: richToLines(it.desc), updates: row.updates.map(u => ({ dateMDY: u.date ? mdy(u.date) : '', lines: richToLines(u.text) })), photos });
       }
       $('#pg-t', o).textContent = 'Laying out pages…';
@@ -2362,7 +2378,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     if (t.dataset.inline && t.dataset.item) {
       const it = S.items.find(i => i.id === t.dataset.item); if (!it) return;
       const k = t.dataset.inline, v = t.value;
-      if (k === 'status') updateItemFields(it.id, { status: v }, 'Item ' + (it.num || '') + ' marked ' + STATUS[v].toLowerCase());
+      if (k === 'status') updateItemFields(it.id, { status: v }, (serialOf(it) || 'Item') + ' marked ' + STATUS[v].toLowerCase());
       else if (k === 'level') updateItemFields(it.id, { level: v }, v ? 'Level set to ' + v : 'Level cleared');
       else if (k === 'room') updateItemFields(it.id, { room: v }, v ? 'Room set to ' + roomLabel(it.project, v) : 'Room cleared');
       else if (k === 'cf') updateItemFields(it.id, { fields: { ...it.fields, [t.dataset.cf]: v } }, 'Saved');
@@ -2376,7 +2392,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       const cfg = projCfg(d.project);
       if (d.level && !cfg.levels.includes(d.level)) d.level = '';
       if (d.room && !findRoom(d.project, d.room)) d.room = '';
-      $('#e-num').value = d.num || '';
+      $('#e-num').value = d.num || ''; const sp = $('#e-sp'); if (sp) sp.textContent = projCfg(d.project).serialPrefix;
       refreshEd('e-level', levelOptions(d)); refreshEd('e-room', roomOptions(d)); refreshEd('e-fields', fieldsHTML(d)); refreshEd('e-parties', partyChips(d));
     }
     else if (t.id === 'e-level') { collectDraft(); const rm = findRoom(d.project, d.room); if (rm && d.level && rm.level !== d.level) d.room = ''; refreshEd('e-room', roomOptions(d)); }
