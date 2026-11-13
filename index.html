@@ -55,7 +55,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Title bar */
 .bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--sheet); border-bottom: 1px solid var(--rule); }
-.bar-in { max-width: 1360px; margin: 0 auto; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 14px; }
+.bar-in { max-width: none; margin: 0 auto; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 14px; }
 .brand { display: flex; align-items: center; gap: 14px; min-width: 0; background: none; border: 0; padding: 0; cursor: pointer; color: var(--mbm); }
 .brand svg { height: 34px; width: auto; display: block; flex: none; }
 .brand .div { width: 1px; height: 28px; background: var(--rule-strong); }
@@ -65,6 +65,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (max-width: 520px) { .brand .div, .brand .lbl { display: none; } }
 
 .wrap { max-width: 1360px; margin: 0 auto; padding-block: 20px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+body.wide .wrap { max-width: none; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
 
 /* Buttons */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--rule-strong); background: var(--sheet); font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; text-decoration: none; color: var(--ink); }
@@ -335,7 +336,14 @@ table.grid tbody tr:last-child td { border-bottom: 0; }
 table.grid tbody tr.closed-row td { color: var(--ink-3); }
 .g-num { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
 .g-title { font-weight: 700; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; }
-.g-desc { color: var(--ink-2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.g-desc { color: var(--ink-2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
+.g-ph { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-start; }
+.g-th { position: relative; width: 56px; height: 56px; padding: 0; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; background: var(--sheet-2); cursor: zoom-in; flex: none; }
+.g-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.g-th:hover, .g-th:focus-visible { border-color: var(--mbm); box-shadow: 0 0 0 1px var(--mbm); }
+.g-th .g-mk { position: absolute; right: 3px; top: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--redline); box-shadow: 0 0 0 1.5px #fff; }
+.g-th.more { display: grid; place-items: center; font-weight: 700; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+.g-pdf { align-self: center; font-size: 11px; font-weight: 700; color: var(--redline); border: 1px solid var(--rule-strong); border-radius: 4px; padding: 2px 5px; }
 .g-desc.crit { color: var(--redline); }
 .g-upd { color: var(--ink-2); font-size: 12px; margin-top: 3px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .g-upd b { color: var(--ink-3); font-weight: 600; }
@@ -449,7 +457,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       <span id="logo-slot"></span>
       <span class="div" aria-hidden="true"></span>
       <span class="lbl">Field Reports</span>
-      <span class="ver" title="App version">v2.2</span>
+      <span class="ver" title="App version">v2.3</span>
     </button>
     <span class="spacer"></span>
   </div>
@@ -1080,6 +1088,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
   }
   function render() {
     S.lb = {};
+    document.body.classList.toggle('wide', S.view === 'items' && S.tab === 'items');
     const a = document.activeElement, id = a && a.id, pos = a && typeof a.selectionStart === 'number' ? a.selectionStart : null;
     if (S.view === 'item') renderEditor();
     else if (S.view === 'report') renderReport();
@@ -1091,6 +1100,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
 
   // ---------- home: Items | Reports ----------
   function renderHome() {
+    document.body.classList.toggle('wide', S.tab === 'items');
     if (S.dbMissing) { app.innerHTML = `<div class="empty"><h3>Can't reach the report database</h3><p>Reload the page. If this keeps happening, check the values in config.js.</p></div>`; return; }
     if (!allLoaded()) { app.innerHTML = `<div class="empty"><h3>Loading field reports</h3><p>Connecting to Studio MBM's shared report log.</p></div>`; return; }
     const openN = S.items.filter(i => i.status === 'open').length;
@@ -1121,7 +1131,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     if (!P) cols.push({ key: 'project', label: 'Project', w: 120 });
     cols.push({ key: 'level', label: 'Level', w: 112 }, { key: 'room', label: 'Room', w: 176 }, { key: 'parties', label: 'Responsible', w: 180 });
     (P ? projCfg(P).fields : []).forEach(f => cols.push({ key: 'cf:' + f.id, label: f.name, w: 120, field: f }));
-    cols.push({ key: 'photos', label: 'Photos', w: 68 }, { key: 'created', label: 'Created', w: 100 }, { key: 'updated', label: 'Updated', w: 100 }, { key: 'status', label: 'Status', w: 106 });
+    cols.push({ key: 'photos', label: 'Photos', w: 196 }, { key: 'created', label: 'Created', w: 100 }, { key: 'updated', label: 'Updated', w: 100 }, { key: 'status', label: 'Status', w: 106 });
     cols.forEach(c => { const w = Number(S.prefs.colw[c.key]); if (w >= 40) c.w = w; });
     return cols;
   }
@@ -1162,7 +1172,12 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       case 'level': return inlineSelect(it, 'level', cfg.levels.map(l => [l, l]), it.level, 'Level');
       case 'room': return inlineSelect(it, 'room', cfg.rooms.filter(r => !it.level || r.level === it.level).map(r => [roomKey(r), roomLabel(it.project, roomKey(r))]), it.room, 'Room');
       case 'parties': return it.parties.length ? esc(partiesText(it)) : '<span class="g-muted">—</span>';
-      case 'photos': return it.photos.length ? String(it.photos.length) : '<span class="g-muted">—</span>';
+      case 'photos': {
+        if (!it.photos.length) return '<span class="g-muted">—</span>';
+        const imgs = it.photos.filter(p => p.kind !== 'pdf'), pdfs = it.photos.length - imgs.length, key = 'g-' + it.id, MAX = 6;
+        S.lb[key] = imgs;
+        return `<div class="g-ph">${imgs.slice(0, MAX).map((p, k) => `<button type="button" class="g-th" data-action="lightbox" data-lb="${esc(key)}" data-k="${k}" title="${esc([p.caption, photoWhen(p)].filter(Boolean).join(' · ') || 'View photo')}" aria-label="View photo ${k + 1} of item ${esc(it.num || '')}"><img src="${blobUrl(p.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">${p.original ? '<i class="g-mk" title="Marked up"></i>' : ''}</button>`).join('')}${imgs.length > MAX ? `<button type="button" class="g-th more" data-action="lightbox" data-lb="${esc(key)}" data-k="${MAX}" aria-label="View more photos">+${imgs.length - MAX}</button>` : ''}${pdfs ? `<span class="g-pdf">${pdfs} PDF</span>` : ''}</div>`;
+      }
       case 'created': return `<span class="mono">${esc(mdy(dateOf(it.createdAt)) || '—')}</span>`;
       case 'updated': return `<span class="mono">${esc(mdy(dateOf(it.updatedAt)) || '—')}</span>`;
       case 'status': return S.canWrite ? inlineSelect(it, 'status', [['open', 'Open'], ['closed', 'Closed']], it.status, 'Status') : `<span class="pill ${it.status}">${STATUS[it.status]}</span>`;
@@ -1180,7 +1195,20 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     if (S.prefs.level && !cfg.levels.includes(S.prefs.level)) S.prefs.level = '';
     if (S.prefs.room && !cfg.rooms.some(r => roomKey(r) === S.prefs.room)) S.prefs.room = '';
     const base = filteredItems(true), cnt = { open: 0, closed: 0 }; base.forEach(i => cnt[i.status]++);
-    const list = filteredItems(false), cols = itemColumns(), total = cols.reduce((s, c) => s + c.w, 0);
+    const list = filteredItems(false), cols = itemColumns();
+    const avail = (box.clientWidth || 0) - 2, itemCol = cols.find(c => c.key === 'item');
+    // Spread spare screen width: Item grows to a readable width first, then Photos, Responsible, Room and Level share the rest.
+    // Columns you have resized by hand keep your width.
+    let spare = avail - cols.reduce((s, c) => s + c.w, 0);
+    if (itemCol && spare > 0) {
+      const set = (k) => S.prefs.colw[k] != null;
+      if (!set('item')) { const g = Math.min(spare, Math.max(0, 760 - itemCol.w)); itemCol.w += g; spare -= g; }
+      const share = { photos: 0.45, parties: 0.25, room: 0.2, level: 0.1 };
+      const fc = cols.filter(c => share[c.key] && !set(c.key)), tw = fc.reduce((t, c) => t + share[c.key], 0);
+      if (spare > 0 && tw) { const sp = spare; fc.forEach(c => { const g = Math.floor(sp * share[c.key] / tw); c.w += g; spare -= g; }); }
+      if (spare > 0) itemCol.w += spare;
+    }
+    const total = cols.reduce((s, c) => s + c.w, 0);
     const parties = uniq([...(S.prefs.project ? cfg.parties.map(p => p.name) : Object.values(S.projects).flatMap(c => c.parties.map(p => p.name))), ...S.items.filter(i => !S.prefs.project || i.project === S.prefs.project).flatMap(i => i.parties)]);
     const chip = (k, label, n) => `<button class="chip ${k}" data-action="st-chip" data-st="${k}" aria-pressed="${S.prefs.status === k}"><span class="k">${label}</span><span class="v">${n}</span></button>`;
     const ar = (k) => S.prefs.sort.key === k ? `<span class="ar">${S.prefs.sort.dir > 0 ? '▲' : '▼'}</span>` : '';
@@ -1711,7 +1739,11 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     const p = $('#paper'), w = $('.paper-wrap'); if (!p || !w) return;
     p.style.zoom = ''; const s = Math.min(1, (w.clientWidth - 2) / p.offsetWidth); p.style.zoom = s < 1 ? String(s) : '';
   }
-  window.addEventListener('resize', () => { if (S.view === 'report') fitPaper(); });
+  let resizeT = null;
+  window.addEventListener('resize', () => {
+    if (S.view === 'report') fitPaper();
+    else if (S.view === 'items' && S.tab === 'items' && !rsState) { clearTimeout(resizeT); resizeT = setTimeout(() => { if (!document.querySelector('.overlay')) renderItemsTab(); }, 150); }
+  });
   function renderReport() {
     const r = S.reports.find(x => x.id === S.reportId);
     if (!r) { app.innerHTML = `<button class="btn ghost back" data-action="home">← Reports</button><div class="empty"><h3>Report not found</h3><p>It may have been deleted by a colleague.</p></div>`; return; }
