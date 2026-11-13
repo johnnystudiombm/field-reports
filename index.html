@@ -395,6 +395,13 @@ fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; 
 .pp-kv dt { font-weight: 700; } .pp-kv dd { margin: 0; }
 .pp-disc { margin: 0 0 10pt; }
 .pp-legend { border-top: 0.75pt solid var(--pp-ink); padding-top: 5pt; margin-bottom: 22pt; }
+.pp-notes { border: 0.6pt solid var(--pp-ink); margin: -10pt 0 22pt; }
+.pp-notes-h { font-weight: 700; padding: 3pt 4pt; border-bottom: 0.6pt solid var(--pp-ink); }
+.pp-notes-b { padding: 4pt; overflow-wrap: anywhere; }
+.pp-notes.editable { cursor: pointer; }
+.pp-notes.editable:hover { background: #f3f5fb; }
+.pp-notes-add { display: block; width: 100%; margin: -12pt 0 16pt; padding: 6pt; border: 1px dashed #9aa6d6; border-radius: 3px; background: none; color: #293d9a; font: 600 8.5pt Arial, Helvetica, sans-serif; cursor: pointer; text-align: center; }
+.pp-notes-add:hover { background: #f3f5fb; }
 .pp-legend p { margin: 0; }
 .pp-red { color: var(--pp-red); font-weight: 700; }
 table.pp-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -442,7 +449,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       <span id="logo-slot"></span>
       <span class="div" aria-hidden="true"></span>
       <span class="lbl">Field Reports</span>
-      <span class="ver" title="App version">v2.1</span>
+      <span class="ver" title="App version">v2.2</span>
     </button>
     <span class="spacer"></span>
   </div>
@@ -1025,6 +1032,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     return {
       id, project: str(d.project), projectNo: str(d.projectNo), reportDate: str(d.reportDate).slice(0, 10), visitDate: str(d.visitDate).slice(0, 10),
       revision: str(d.revision) || 'n/a', createdAt: d.createdAt || 0, author: d.author || null, authorEmail: d.authorEmail || '',
+      notes: String(d.notes || ''), notesTitle: str(d.notesTitle) || 'General Notes',
       excluded: arr(d.excluded).map(String), _old: !d.legacyItems && Array.isArray(d.items) && d.items.length ? d.items : null, _raw: d
     };
   }
@@ -1647,6 +1655,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       <dl class="pp-kv"><dt>Project</dt><dd>${esc(r.project)}</dd><dt>Date</dt><dd>${esc(longDate(r.reportDate))}</dd><dt>Site Meeting</dt><dd>${esc(longDate(siteOf(r)))}</dd><dt>Revision</dt><dd>${esc(r.revision || 'n/a')}</dd></dl>
       <p class="pp-disc">${esc(DISCLAIMER)}</p>
       <div class="pp-legend"><p>Items requiring correction/action in the field are in <b>bold</b>.</p><p>Critical items are in <span class="pp-red">red</span>.</p><p>Items from previous Field Reports marked CLOSED are removed from subsequent Field Reports.</p></div>
+      ${notesBoxHTML(r)}
       <table class="pp-table"><colgroup><col style="width:26pt"><col style="width:70pt"><col></colgroup>
         <thead><tr><th style="text-align:center">#</th><th>Status</th><th>Date/Description/Photo</th></tr></thead>
         <tbody>${rows.length ? rows.map(row => {
@@ -1668,6 +1677,36 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       <div class="pp-foot"><span>Project: <b>${esc(r.project)}</b></span><span class="c">Field Report</span><span class="r"></span></div>
     </div>`;
   }
+  const hasNotes = (r) => !!richToPlain(r.notes || '').trim();
+  function notesBoxHTML(r) {
+    if (!hasNotes(r)) return S.canWrite ? '<button class="pp-notes-add" data-action="edit-notes">+ Add general notes</button>' : '';
+    return `<div class="pp-notes ${S.canWrite ? 'editable' : ''}" ${S.canWrite ? 'data-action="edit-notes" title="Click to edit the general notes"' : ''}>
+      <div class="pp-notes-h">${esc(r.notesTitle || 'General Notes')}</div><div class="pp-notes-b rich">${sanitizeRich(r.notes)}</div></div>`;
+  }
+  // General notes: one rich-text box per report, between the legend and the items.
+  function notesDialog(r) {
+    const o = document.createElement('div'); o.className = 'overlay';
+    o.innerHTML = `<div class="dialog wide" role="dialog" aria-modal="true" aria-label="General notes">
+      <div><div class="eyebrow">${esc(r.project)} · ${esc(reportTitle(r))}</div><h4>General notes</h4></div>
+      <div class="fld"><label for="gn-t">Heading</label><input class="input" id="gn-t" value="${esc(r.notesTitle || 'General Notes')}"></div>
+      <div class="fld"><span class="lbl-row">Notes</span>${rteHTML('gn-b', r.notes || '', 'Notes for the whole report: schedule, access, sequencing, general reminders…')}</div>
+      <p class="hint" style="margin:0">Shows between the legend and the items, in the report and the PDF. Leave the notes empty to hide the box.</p>
+      <div class="actions"><button class="btn" data-x="cancel">Cancel</button><button class="btn primary" data-x="save">Save notes</button></div>
+    </div>`;
+    const close = () => { o.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    o.addEventListener('click', async (e) => {
+      const x = e.target.closest('[data-x]'); if (!x) return;
+      if (x.dataset.x === 'cancel') return close();
+      const notes = sanitizeRich($('#gn-b', o).innerHTML), notesTitle = str($('#gn-t', o).value) || 'General Notes';
+      x.disabled = true; x.textContent = 'Saving…';
+      try { await S.db.collection('reports').doc(r.id).update({ notes: richToPlain(notes).trim() ? notes : '', notesTitle }); close(); toast(richToPlain(notes).trim() ? 'General notes saved' : 'General notes removed'); }
+      catch (err) { x.disabled = false; x.textContent = 'Save notes'; writeError(err); }
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(o);
+    const b = $('#gn-b', o); b.focus();
+  }
   function fitPaper() {
     const p = $('#paper'), w = $('.paper-wrap'); if (!p || !w) return;
     p.style.zoom = ''; const s = Math.min(1, (w.clientWidth - 2) / p.offsetWidth); p.style.zoom = s < 1 ? String(s) : '';
@@ -1684,7 +1723,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
         <div class="muted" style="font-size:13px;margin-top:4px">${o} open, ${shown.length - o} closed since ${prev ? 'the ' + esc(mdy(siteOf(prev))) + ' report' : 'the start'}. The report updates as items change; click an item to edit it.</div></div></div>
       <div class="rep-actions">
         <button class="btn primary" data-action="pdf">Download PDF</button>
-        ${S.canWrite ? '<button class="btn" data-action="edit-report">Edit report details</button>' : ''}
+        ${S.canWrite ? '<button class="btn" data-action="edit-report">Edit report details</button><button class="btn" data-action="edit-notes">General notes</button>' : ''}
         <button class="btn" data-action="copy">Copy as text</button>
         ${S.canWrite ? '<button class="btn red" data-action="delete-report">Delete report</button>' : ''}
       </div>
@@ -1712,13 +1751,16 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
       </div>
       <div class="fld"><label for="nr-rev">Revision</label><input class="input" id="nr-rev" value="${esc(existing ? existing.revision : 'n/a')}"></div>
       <p class="hint" id="nr-prev" style="margin:0"></p>
+      ${existing ? '' : '<label class="check" id="nr-cn-l" hidden><input type="checkbox" id="nr-cn" checked> Start with the general notes from the previous report</label>'}
       <div class="actions"><button class="btn" data-x="cancel">Cancel</button><button class="btn primary" data-x="ok">${existing ? 'Save' : 'Create report'}</button></div>
     </div>`;
     const preview = () => {
       const tmp = { id: existing ? existing.id : '__new', project: $('#nr-p', o).value, reportDate: $('#nr-rd', o).value, visitDate: $('#nr-vd', o).value, createdAt: existing ? existing.createdAt : Date.now(), excluded: existing ? existing.excluded : [] };
       const rows = reportRows(tmp), op = rows.filter(x => x.status === 'open').length, cl = rows.length - op, prev = prevReport(tmp);
       $('#nr-prev', o).textContent = `This report will show ${op} open item${op === 1 ? '' : 's'}${cl ? ` and ${cl} closed since ${prev ? 'the ' + mdy(siteOf(prev)) + ' report' : 'the start'}` : ''}.`;
+      const cl2 = $('#nr-cn-l', o); if (cl2) { cl2.hidden = !(prev && hasNotes(prev)); notesFrom = prev; }
     };
+    let notesFrom = null;
     const close = () => { o.remove(); document.removeEventListener('keydown', onKey); };
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     o.addEventListener('change', preview); o.addEventListener('input', preview);
@@ -1732,7 +1774,9 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
         if (existing) { await S.db.collection('reports').doc(existing.id).update(body); close(); toast('Report details saved'); }
         else {
           const ref = S.db.collection('reports').doc();
-          await ref.set({ ...body, projectNo: projCfg(body.project).projectNo || '', excluded: [], createdAt: Date.now(), author: S.uid });
+          const carry = notesFrom && hasNotes(notesFrom) && $('#nr-cn', o) && $('#nr-cn', o).checked;
+          await ref.set({ ...body, projectNo: projCfg(body.project).projectNo || '', excluded: [], createdAt: Date.now(), author: S.uid,
+            notes: carry ? notesFrom.notes : '', notesTitle: carry ? (notesFrom.notesTitle || 'General Notes') : 'General Notes' });
           close(); toast('Report created'); S.prefs.rproject = body.project; savePrefs(); go('report', { reportId: ref.id });
         }
       } catch (err) { x.disabled = false; writeError(err); }
@@ -1744,6 +1788,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
   // ---------- copy as text ----------
   function reportText(r) {
     const L = [reportTitle(r), `Project: ${r.project}${projCfg(r.project).projectNo ? ' (' + projCfg(r.project).projectNo + ')' : ''}`, `Date: ${longDate(r.reportDate)}`, `Site Meeting: ${longDate(siteOf(r))}`, `Revision: ${r.revision || 'n/a'}`, ''];
+    if (hasNotes(r)) L.push((r.notesTitle || 'General Notes').toUpperCase(), richToPlain(r.notes).trim(), '');
     reportRows(r).forEach(({ item: i, status, updates }) => {
       L.push(`${i.num || '-'}. [${status.toUpperCase()}] ${i.title || ''}${i.critical ? ' (CRITICAL)' : ''}`);
       const meta = [locationText(i), partiesText(i) ? 'Responsible: ' + partiesText(i) : ''].filter(Boolean);
@@ -1968,6 +2013,21 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     paragraph([[{ t: 'Items requiring correction/action in the field are in ' }, { t: 'bold', b: true }, { t: '.' }]], { lh: 10 });
     paragraph([[{ t: 'Critical items are in ' }, { t: 'red', b: true, color: RED }, { t: '.' }]], { lh: 10 });
     paragraph(plain('Items from previous Field Reports marked CLOSED are removed from subsequent Field Reports.'), { lh: 10 });
+
+    // ---- general notes box (optional, per report) ----
+    if (R.notesLines && R.notesLines.some(l => l.some(g => String(g.t || '').trim()))) {
+      y += 12;
+      const nx = M + PAD, nw = CW() - 2 * PAD, nh = 13;
+      const box = (t, b) => { doc.setDrawColor(...INK); doc.setLineWidth(0.6); doc.rect(M, t, CW(), b - t); };
+      const lines = wrapRuns(R.notesLines, nw, FS);
+      if (y + nh + PAD + LH + PAD > BOTTOM) newPage();
+      box(y, y + nh);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(FS); doc.setTextColor(...INK); doc.text(String(R.notesTitle || 'General Notes'), nx, y + 9.5);
+      y += nh;
+      let segTop = y; y += PAD;
+      lines.forEach(l => { if (y + LH > BOTTOM) { box(segTop, y + PAD); newPage(); segTop = y; y += PAD; } drawLine(l, nx, y + 7.6, FS, INK); y += LH; });
+      y += PAD; box(segTop, y);
+    }
     y += 22;
 
     // ---- items table ----
@@ -2078,7 +2138,8 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     document.body.appendChild(o);
     try {
       let done = 0;
-      const R = { project: r.project, reportDateMDY: mdy(r.reportDate), reportDateLong: longDate(r.reportDate), visitDateLong: longDate(siteOf(r)), revision: r.revision || 'n/a', disclaimer: DISCLAIMER, items: [] };
+      const R = { project: r.project, reportDateMDY: mdy(r.reportDate), reportDateLong: longDate(r.reportDate), visitDateLong: longDate(siteOf(r)), revision: r.revision || 'n/a', disclaimer: DISCLAIMER, items: [],
+        notesTitle: r.notesTitle || 'General Notes', notesLines: hasNotes(r) ? richToLines(r.notes) : null };
       for (const row of rows) {
         const it = row.item, photos = [];
         for (const p of row.photos) {
@@ -2217,6 +2278,7 @@ tr.pp-row:hover .pp-hide, .pp-hide:focus-visible { visibility: visible; }
     else if (a === 'open-report') go('report', { reportId: b.dataset.report });
     else if (a === 'pdf' && r) exportPdf(r);
     else if (a === 'edit-report' && r) reportDialog(r);
+    else if (a === 'edit-notes' && r) notesDialog(r);
     else if (a === 'copy' && r) copyText(r);
     else if (a === 'delete-report' && r) {
       if (!(await confirmBox('Delete this report?', `${reportTitle(r)} for ${r.project} will be removed. Items stay on the Items page.`, 'Delete report'))) return;
