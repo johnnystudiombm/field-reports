@@ -62,7 +62,7 @@ Done. Send colleagues the site address.
 - **Status** is Open or Closed. A closed item shows once as CLOSED in the next report, then drops off.
 - **Columns:** drag a column edge to resize (double-click to reset), click a header to sort.
 - **Project settings** (Items page, project selected): levels, rooms, responsible parties, extra columns and the project number. **Import from Excel** reads the template workbook (sheets "Room Schedule" and "Responsible Parties").
-- **Reports:** Reports tab → **New report** → pick the project, report date and site meeting date. It shows that project's open items on the site meeting date, plus items closed since the previous report. Reports are live: editing an item updates every report it appears in (updates and photos dated after a report's site meeting don't show in that report). Hover an item in a report and click **Hide** to leave it out of that one report.
+- **Reports:** Reports tab → **New report**. A new report lists every open item from the Items page with its latest updates and photos (dates don't filter anything), plus closed items that no earlier report has shown as CLOSED. The newest report is **live** and follows changes on the Items page. Creating a newer report **issues** the older one: its item list and OPEN/CLOSED status stay as they were when it was created or last exported. Deleting a report puts its closed items back, so they show as CLOSED in the next new report. In a report you can change **Sort by** (serial, level & room, responsible, open first, custom), hover a row to move it or **Remove** it, **Restore** removed items, and **+ Add items**.
 - **PDF:** open a report and click **Download PDF**. It's letter size and matches the report view.
 
 ## Things to know about the free plans
