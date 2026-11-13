@@ -472,7 +472,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       <span id="logo-slot"></span>
       <span class="div" aria-hidden="true"></span>
       <span class="lbl">Field Reports</span>
-      <span class="ver" title="App version">v2.5</span>
+      <span class="ver" title="App version">v2.6</span>
     </button>
     <span class="spacer"></span>
   </div>
@@ -545,7 +545,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       const d = row.data || {};
       if (d.author && d.authorEmail) people.set(d.author, d.authorEmail);
       (d.photos || []).forEach((p) => { if (p) { paths.push(p.id); if (p.original) paths.push(p.original); } });
-      (d.items || []).forEach((i) => (i.photos || []).forEach((p) => { paths.push(p.id); if (p.original) paths.push(p.original); }));
+      [...(d.items || []), ...(d.content || []), ...(d.legacyItems || [])].forEach((i) => ((i && i.photos) || []).forEach((p) => { if (p) { paths.push(p.id); if (p.original) paths.push(p.original); } }));
     });
     await signPaths(paths);
     return { docs: data.map((row) => ({ id: row.id, exists: true, data: () => row.data || {}, metadata: { fromCache: false, hasPendingWrites: false } })), size: data.length, empty: !data.length };
@@ -1058,7 +1058,8 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       revision: str(d.revision) || 'n/a', createdAt: d.createdAt || 0, author: d.author || null, authorEmail: d.authorEmail || '',
       notes: String(d.notes || ''), notesTitle: str(d.notesTitle) || 'General Notes',
       snapshot: d.snapshot && Array.isArray(d.snapshot.entries) ? { at: Number(d.snapshot.at) || 0, entries: d.snapshot.entries.filter(e => e && e.id).map(e => ({ id: String(e.id), status: e.status === 'closed' ? 'closed' : 'open' })) } : null,
-      sentAt: Number(d.sentAt) || 0, included: arr(d.included).map(String), sortMode: str(d.sortMode) || 'serial', manualOrder: arr(d.manualOrder).map(String),
+      content: Array.isArray(d.content) ? d.content.filter(c => c && c.id).map(c => ({ ...normItem(String(c.id), c), status: c.status === 'closed' ? 'closed' : 'open' })) : null, builtAt: Number(d.builtAt) || 0,
+      included: arr(d.included).map(String), sortMode: str(d.sortMode) || 'serial', manualOrder: arr(d.manualOrder).map(String),
       excluded: arr(d.excluded).map(String), _old: !d.legacyItems && Array.isArray(d.items) && d.items.length ? d.items : null, _raw: d
     };
   }
@@ -1070,16 +1071,49 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
   const photoDate = (p) => dateOf(p.addedAt);
   const photoWhen = (p) => p.addedAt ? 'Uploaded ' + fmtDT(p.addedAt) : '';
   // ---------- report history ----------
-  // The newest report of a project is LIVE: every open item (latest text, updates and photos, whatever their dates),
-  // plus closed items that no other report has shown as CLOSED yet.
-  // Creating a newer report ISSUES the older ones: their item list and OPEN/CLOSED status are fixed (item text stays current).
+  // A report is a record. When it's created it saves a copy of its items (text, updates, photos, status) in `content`;
+  // later changes on the Items page never change it. Only the newest report of a project can be refreshed, on request.
+  // A new report lists every open item plus closed items that no other report has shown as CLOSED since they were closed.
   // Deleting a report removes it from the history, so a closed item it showed appears again in the next new report.
   const byCreated = (a, b) => (a.createdAt || 0) - (b.createdAt || 0);
   const projectReports = (project) => S.reports.filter(x => x.project === project).sort(byCreated);
   function latestReport(project, excludeId) { const l = projectReports(project).filter(x => x.id !== excludeId); return l[l.length - 1] || null; }
-  const isLegacy = (r) => !r.snapshot && r.id !== '__new' && (latestReport(r.project) || {}).id !== r.id;
-  const isLive = (r) => !r.snapshot && !isLegacy(r);
-  // Reports made before report history existed (older, never issued): their list as the old date rules showed it.
+  const isLatest = (r) => (latestReport(r.project) || {}).id === r.id;
+  const builtOf = (x) => x.builtAt || (x.snapshot && x.snapshot.at) || x.createdAt || 0;
+  const snapItem = (it, status) => ({ ...normItem(it.id, JSON.parse(JSON.stringify(it))), status: status || it.status });
+  const contentBody = (list) => list.map(c => ({ id: c.id, ...itemBody(c), status: c.status === 'closed' ? 'closed' : 'open' }));
+  // Has another report shown this item as CLOSED (since it was last closed)?
+  function closedReported(it, excludeId) {
+    const stamp = it.closedStamp || 0;
+    return S.reports.some(x => x.project === it.project && x.id !== excludeId && builtOf(x) >= stamp && !(x.excluded || []).includes(it.id)
+      && reportContent(x).some(c => c.id === it.id && c.status === 'closed'));
+  }
+  // The items a new report starts with: every open item and closed items not yet reported, as they are right now.
+  function buildContent(project, excludeId) {
+    return S.items.filter(i => i.project === project && (i.status === 'open' || !closedReported(i, excludeId))).map(i => snapItem(i));
+  }
+  // ----- reports saved before v2.6 (no saved content yet): rebuilt once, then saved -----
+  // Reports from the first version keep their original items (legacyItems): rebuilt exactly as they were issued.
+  function legacyContent(r) {
+    const raw = S.settingsRaw || {}, fl = arr((raw.projectFields || {})[r.project]).find(f => f && /floor\s*level/i.test(f.name || ''));
+    const flId = fl ? fl.id : null, site = siteOf(r);
+    return arr(r._raw && r._raw.legacyItems).filter(it => it && it.key).map(it => {
+      const cur = S.items.find(i => i.id === it.key);
+      const fields = { ...(it.fields || {}) }; let level = '';
+      if (flId && fields[flId]) { level = normLevel(fields[flId]); delete fields[flId]; }
+      const room = '', parties = str(it.responsible) ? [str(it.responsible)] : [];
+      const updates = [...arr(it.updates).filter(u => u && str(u.note)).map((u, k) => ({ id: 'L' + k, date: str(u.date).slice(0, 10), text: mdToRich(u.note) })), ...(str(it.note) ? [{ id: 'Ln', date: site, text: mdToRich(it.note) }] : [])];
+      const photos = arr(it.photos).filter(p => p && p.id).map(p => {
+        const cap = str(p.caption);
+        const o = { id: p.id, kind: p.kind || 'image', name: p.name || '', caption: /^photo:?$/i.test(cap) ? '' : cap.replace(/:\s*$/, ''), size: p.size || 0, addedAt: toLocalDT(p.addedAt) || toLocalDT(site) };
+        if (p.original) o.original = p.original; if (p.markedAt) o.markedAt = toLocalDT(p.markedAt); return o;
+      });
+      const closed = it.status === 'closed';
+      return { ...normItem(it.key, { project: r.project, num: it.num || (cur && cur.num), title: it.title, desc: mdToRich(it.desc), level, room, parties, status: closed ? 'closed' : 'open', critical: it.critical,
+        createdAt: it.createdAt || (cur && cur.createdAt), updatedAt: (r._raw && r._raw.updatedAt) || r.createdAt, closedAt: closed ? site : '', updates, photos, fields }), status: closed ? 'closed' : 'open' };
+    });
+  }
+  // Older reports without their original items: the item list they showed, with updates and photos dated up to their site meeting.
   function legacyEntries(r) {
     const site = siteOf(r);
     const prev = S.reports.filter(x => x.project === r.project && x.id !== r.id && (siteOf(x) < site || (siteOf(x) === site && (x.createdAt || 0) < (r.createdAt || 0))))
@@ -1094,23 +1128,49 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     });
     return out;
   }
-  function shownClosedElsewhere(it, r, extra) {
-    const stamp = it.closedStamp || 0;
-    const srcs = [];
-    S.reports.forEach(x => {
-      if (x.project !== r.project || x.id === r.id) return;
-      if (x.snapshot) srcs.push({ at: x.snapshot.at || 0, entries: x.snapshot.entries, ex: x.excluded || [] });
-      else if (isLegacy(x)) srcs.push({ at: Date.now(), entries: legacyEntries(x), ex: x.excluded || [] });
-    });
-    return srcs.concat(extra || []).some(s => s.at >= stamp && !s.ex.includes(it.id) && s.entries.some(e => e.id === it.id && e.status === 'closed'));
+  function datedCopy(it, status, site) {
+    const c = snapItem(it, status);
+    if (site) { c.updates = c.updates.filter(u => !u.date || u.date <= site); c.photos = c.photos.filter(p => !p.addedAt || photoDate(p) <= site); }
+    return c;
   }
-  function reportEntries(r, extra) {
-    let entries;
-    if (r.snapshot) entries = r.snapshot.entries.slice();
-    else if (isLegacy(r)) entries = legacyEntries(r);
-    else entries = S.items.filter(i => i.project === r.project && (i.status === 'open' || !shownClosedElsewhere(i, r, extra))).map(i => ({ id: i.id, status: i.status }));
-    (r.included || []).forEach(id => { if (!entries.some(e => e.id === id)) { const it = S.items.find(i => i.id === id && i.project === r.project); if (it) entries.push({ id, status: it.status }); } });
-    return entries;
+  function virtualContent(r) {
+    if (r._raw && Array.isArray(r._raw.legacyItems) && r._raw.legacyItems.length) return legacyContent(r);
+    const latest = isLatest(r) && !r.snapshot;
+    let list;
+    if (latest) list = buildContent(r.project, r.id);
+    else {
+      const entries = r.snapshot ? r.snapshot.entries : legacyEntries(r), site = siteOf(r);
+      list = entries.map(e => { const it = S.items.find(i => i.id === e.id); return it ? datedCopy(it, e.status, site) : null; }).filter(Boolean);
+    }
+    (r.included || []).forEach(id => { if (!list.some(c => c.id === id)) { const it = S.items.find(i => i.id === id && i.project === r.project); if (it) list.push(snapItem(it)); } });
+    return list;
+  }
+  const reportContent = (r) => r.content || virtualContent(r);
+  // One-time: save the content of every report that doesn't have it yet (reports made before v2.6).
+  let contentChecked = false;
+  async function ensureContent() {
+    if (contentChecked || !S.canWrite || !S.db || !allLoaded() || S.itemsError || needsMigration() || S.migrating) return;
+    const todo = S.reports.filter(x => !x.content);
+    contentChecked = true;
+    if (!todo.length) return;
+    // Work out every report first (older ones before the newest), then save.
+    const order = [...todo].sort((a, b) => (isLatest(a) - isLatest(b)) || byCreated(a, b));
+    const done = order.map(x => {
+      const legacy = x._raw && Array.isArray(x._raw.legacyItems) && x._raw.legacyItems.length;
+      const content = virtualContent(x), builtAt = legacy ? (x.createdAt || Date.now()) : x.snapshot ? x.snapshot.at : isLatest(x) ? Date.now() : (x.createdAt || Date.now());
+      x.content = content; x.builtAt = builtAt;
+      return { x, content, builtAt };
+    });
+    for (const { x, content, builtAt } of done) {
+      try { await S.db.collection('reports').doc(x.id).update({ content: contentBody(content), builtAt }); }
+      catch (e) { contentChecked = false; return; }
+    }
+  }
+  // Photo files still used by a saved report (kept when an item is deleted).
+  function reportBlobIds() {
+    const ids = new Set();
+    S.reports.forEach(x => [...(x.content || []), ...arr(x._raw && x._raw.legacyItems)].forEach(c => arr(c && c.photos).forEach(p => { if (p) { ids.add(p.id); if (p.original) ids.add(p.original); } })));
+    return ids;
   }
   const REPORT_SORTS = [['serial', 'Serial number'], ['level', 'Level & room'], ['responsible', 'Responsible'], ['status', 'Open first, then closed'], ['manual', 'Custom order']];
   function sortReportRows(r, rows) {
@@ -1124,51 +1184,33 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       : ser;
     return rows.sort(cmp);
   }
-  // Rows a report shows. Every update and photo of the item is included, whatever its date.
-  function reportRows(r, withHidden, extra) {
+  const rowsOf = (r, list, withHidden) => {
     const ex = r.excluded || [];
-    let rows = reportEntries(r, extra).map(e => {
-      const it = S.items.find(i => i.id === e.id); if (!it) return null;
-      return { item: it, status: e.status, hidden: ex.includes(it.id), updates: it.updates.filter(u => (u.text || '').trim()).sort((a, b) => (a.date || '').localeCompare(b.date || '')), photos: it.photos };
-    }).filter(Boolean);
+    let rows = list.map(c => ({ item: c, status: c.status, hidden: ex.includes(c.id), updates: c.updates.filter(u => richToPlain(u.text || '').trim()).sort((a, b) => (a.date || '').localeCompare(b.date || '')), photos: c.photos }));
     if (!withHidden) rows = rows.filter(x => !x.hidden);
     return sortReportRows(r, rows);
+  };
+  // Rows a report shows: its saved items.
+  const reportRows = (r, withHidden) => rowsOf(r, reportContent(r), withHidden);
+  // How many items differ between the newest report and the Items page right now.
+  function staleCount(r) {
+    if (!isLatest(r)) return 0;
+    const fresh = buildContent(r.project, r.id), cur = reportContent(r);
+    const key = (c) => JSON.stringify([c.num, c.title, c.desc, c.level, c.room, c.parties, c.status, c.critical, c.fields, c.updates.map(u => [u.date, u.text]), c.photos.map(p => [p.id, p.caption, p.addedAt])]);
+    let n = 0;
+    fresh.forEach(f => { const c = cur.find(x => x.id === f.id); if (!c || key(c) !== key(f)) n++; });
+    cur.forEach(c => { if (!fresh.some(f => f.id === c.id) && !S.items.some(i => i.id === c.id && i.status === 'closed')) n++; });
+    return n;
   }
-  // What a report keeps when it is issued. For the live report: items closed after it was created (or last exported)
-  // were still open when it went out, so they stay OPEN here and show as CLOSED in the next report instead;
-  // items added after that point are left out.
-  function issuedEntries(x) {
-    if (isLegacy(x)) return legacyEntries(x);
-    const cut = Math.max(x.createdAt || 0, x.sentAt || 0), inc = x.included || [];
-    return reportEntries(x).map(e => {
-      const it = S.items.find(i => i.id === e.id); if (!it) return null;
-      if (it.createdStamp && it.createdStamp > cut && !inc.includes(e.id)) return null;
-      return { id: e.id, status: e.status === 'closed' && it.closedStamp && it.closedStamp > cut ? 'open' : e.status };
-    }).filter(Boolean);
-  }
-  async function markSent(r) {
-    if (!S.canWrite || !isLive(r)) return;
-    try { await S.db.collection('reports').doc(r.id).update({ sentAt: Date.now() }); } catch (e) {}
-  }
-  // Fix the item list of every not-yet-issued report of a project (done just before a newer report is created).
-  async function issueReports(project) {
-    const now = Date.now();
-    const todo = projectReports(project).filter(y => !y.snapshot).map(x => ({ x, entries: issuedEntries(x) }));
-    for (const { x, entries } of todo) {
-      await S.db.collection('reports').doc(x.id).update({ snapshot: { at: now, entries } });
-      x.snapshot = { at: now, entries };
-    }
-  }
-  // One-time: older reports made before report history existed get their item list fixed as they showed it.
-  let historyChecked = false;
-  async function ensureHistory() {
-    if (historyChecked || !S.canWrite || !S.db || !allLoaded() || S.itemsError || needsMigration() || S.migrating) return;
-    historyChecked = true;
-    const now = Date.now(), todo = [];
-    projectNames().forEach(p => projectReports(p).slice(0, -1).filter(x => !x.snapshot).forEach(x => todo.push({ x, entries: legacyEntries(x) })));
-    for (const { x, entries } of todo) {
-      try { await S.db.collection('reports').doc(x.id).update({ snapshot: { at: now, entries } }); } catch (e) { historyChecked = false; return; }
-    }
+  async function refreshReport(r) {
+    const ok = await confirmBox('Update this report from the Items page?', `${reportTitle(r)} will be rebuilt from the Items page as it is now: every open item with its latest text, updates and photos, plus closed items not yet shown as CLOSED in another report. Items you removed from this report stay removed. Earlier reports don't change.`, 'Update report');
+    if (!ok) return;
+    try {
+      const content = buildContent(r.project, r.id);
+      (r.included || []).forEach(id => { const it = S.items.find(i => i.id === id); if (it && !content.some(c => c.id === id)) content.push(snapItem(it)); });
+      await S.db.collection('reports').doc(r.id).update({ content: contentBody(content), builtAt: Date.now() });
+      toast('Report updated from the Items page');
+    } catch (e) { writeError(e); }
   }
 
   // ---------- routing ----------
@@ -1391,7 +1433,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
             <div class="datecell"><div class="m">${d.toLocaleDateString('en-US', { month: 'short' })}</div><div class="d">${d.getDate()}</div><div class="y">${d.getFullYear()}</div></div>
             <div class="row-main"><div class="row-proj">${esc(r.project || 'Untitled project')}</div>
               <div class="row-meta">${esc(reportTitle(r))} · Site meeting ${esc(mdy(siteOf(r)))}${projCfg(r.project).projectNo ? ' · ' + esc(projCfg(r.project).projectNo) : ''}${r.revision && r.revision !== 'n/a' ? ' · Rev ' + esc(r.revision) : ''}</div></div>
-            <div class="row-side">${isLive(r) ? '<span class="pill live">Live</span>' : ''}${o ? `<span class="pill open">${o} open</span>` : ''}${c ? `<span class="pill closed">${c} closed</span>` : ''}${!rows.length ? '<span class="pill none">No items</span>' : ''}</div>
+            <div class="row-side">${isLatest(r) ? '<span class="pill live">Latest</span>' : ''}${o ? `<span class="pill open">${o} open</span>` : ''}${c ? `<span class="pill closed">${c} closed</span>` : ''}${!rows.length ? '<span class="pill none">No items</span>' : ''}</div>
           </button>`; }).join('')}</div>`}`;
   }
 
@@ -1568,13 +1610,14 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
   }
   async function deleteItem() {
     const d = S.draft;
-    const ok = await confirmBox('Delete this item?', `${serialOf(d) || 'This item'} ${d.title ? '"' + d.title + '"' : ''} and its photos will be removed for everyone, including from past reports. This can't be undone.`, 'Delete item');
+    const ok = await confirmBox('Delete this item?', `${serialOf(d) || 'This item'} ${d.title ? '"' + d.title + '"' : ''} will be removed from the Items page for everyone. Reports already saved keep their copy. This can't be undone.`, 'Delete item');
     if (!ok) return;
     try {
       await S.db.collection('items').doc(d.id).delete();
       const orig = S.items.find(i => i.id === d.id) || d, ids = [];
       orig.photos.forEach(p => { ids.push(p.id); if (p.original) ids.push(p.original); });
-      discardUploads([...ids, ...S.sessionUploads]); S.sessionUploads = new Set();
+      const used = reportBlobIds();
+      discardUploads([...ids.filter(x => !used.has(x)), ...S.sessionUploads]); S.sessionUploads = new Set();
       toast('Item deleted'); goBack();
     } catch (e) { writeError(e); }
   }
@@ -1856,14 +1899,13 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     if (!r) { app.innerHTML = `<button class="btn ghost back" data-action="home">← Reports</button><div class="empty"><h3>Report not found</h3><p>It may have been deleted by a colleague.</p></div>`; return; }
     const rows = reportRows(r, true), shown = rows.filter(x => !x.hidden), hidden = rows.filter(x => x.hidden);
     const o = shown.filter(x => x.status === 'open').length;
-    const state = isLive(r)
-      ? `<b>Live report.</b> Shows every open item from the Items page with its latest updates and photos, plus items closed since the last report. Changes on the Items page appear here right away.`
-      : r.snapshot ? `<b>Issued.</b> This report's item list and open/closed status were fixed on ${esc(fmtDT(r.snapshot.at))}, when a newer report was created. Item text and photos show their latest version.`
-      : `<b>Earlier report.</b> Its item list is fixed. Item text and photos show their latest version.`;
+    const built = builtOf(r), stale = S.canWrite ? staleCount(r) : 0;
+    const state = `Saved as of ${esc(built ? fmtDT(built) : mdy(r.reportDate))}. Later changes on the Items page don't change this report; they go into the next new report.`;
     app.innerHTML = `
       <button class="btn ghost back" data-action="home">← Reports</button>
       <div class="page-head"><div><div class="eyebrow">${esc(r.project)}</div><h2 class="view-title">${esc(reportTitle(r))}</h2>
         <p class="rep-state">${o} open, ${shown.length - o} closed. ${state}</p></div></div>
+      ${stale ? `<div class="notice stale-note"><span><b>${stale} item${stale === 1 ? '' : 's'} changed on the Items page</b> since this report was saved. This is the newest report, so you can bring it up to date. Earlier reports always stay as they were.</span><button class="btn sm" data-action="refresh-report">Update from Items page</button></div>` : ''}
       <div class="rep-actions">
         <button class="btn primary" data-action="pdf">Download PDF</button>
         ${S.canWrite ? '<button class="btn" data-action="edit-report">Edit report details</button><button class="btn" data-action="edit-notes">General notes</button>' : ''}
@@ -1873,7 +1915,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       ${S.canWrite ? `<div class="rep-tools">
         <label for="rep-sort">Sort by <select class="input" id="rep-sort">${REPORT_SORTS.map(([k, l]) => `<option value="${k}" ${k === (r.sortMode || 'serial') ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <button class="btn sm" data-action="add-items">+ Add items</button>
-        <span class="hint">Hover a row to move it up or down or remove it. Click a row to edit the item.</span>
+        <span class="hint">Hover a row to move it up or down or remove it. Click a row to open the item on the Items page.</span>
       </div>` : ''}
       <div class="paper-wrap">${reportPaperHTML(r, shown)}</div>
       ${hidden.length ? `<div class="notice hidden-list"><span><b>Removed from this report:</b> ${hidden.map(h => `${esc(serialOf(h.item))} ${esc(h.item.title || '')}`).join(', ')}</span>${S.canWrite ? hidden.map(h => `<button class="btn sm" data-action="show-row" data-item="${esc(h.item.id)}">Restore ${esc(serialOf(h.item))}</button>`).join('') : ''}</div>` : ''}`;
@@ -1881,7 +1923,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
   }
   async function setExcluded(r, id, hide) {
     const ex = new Set(r.excluded || []); hide ? ex.add(id) : ex.delete(id);
-    const it = S.items.find(i => i.id === id);
+    const it = reportContent(r).find(c => c.id === id) || S.items.find(i => i.id === id);
     try { await S.db.collection('reports').doc(r.id).update({ excluded: [...ex] }); toast(`${serialOf(it) || 'Item'} ${hide ? 'removed from' : 'restored to'} this report`); }
     catch (e) { writeError(e); }
   }
@@ -1905,7 +1947,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     const o = document.createElement('div'); o.className = 'overlay';
     o.innerHTML = `<div class="dialog wide" role="dialog" aria-modal="true" aria-label="Add items">
       <div><div class="eyebrow">${esc(r.project)} · ${esc(reportTitle(r))}</div><h4>Add items to this report</h4></div>
-      <p style="font-size:14px">Items not in this report, for example items closed and already reported earlier.</p>
+      <p style="font-size:14px">Items not in this report, for example items closed and already reported earlier. They're added as they are on the Items page now.</p>
       <div class="add-list">${cands.map(i => `<label><input type="checkbox" value="${esc(i.id)}"><span class="mono" style="font-weight:700">${esc(serialOf(i))}</span><span>${esc(i.title || richToPlain(i.desc).slice(0, 80) || 'Untitled item')}</span><span class="pill ${i.status}">${STATUS[i.status]}</span></label>`).join('')}</div>
       <div class="actions"><button class="btn" data-x="cancel">Cancel</button><button class="btn primary" data-x="add">Add to report</button></div>
     </div>`;
@@ -1917,7 +1959,8 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       const ids = $$('input:checked', o).map(c => c.value);
       if (!ids.length) { toast('Tick the items to add.'); return; }
       x.disabled = true;
-      try { await S.db.collection('reports').doc(r.id).update({ included: uniq([...(r.included || []), ...ids]), excluded: (r.excluded || []).filter(id => !ids.includes(id)) }); close(); toast(`Added ${ids.length} item${ids.length === 1 ? '' : 's'} to this report`); }
+      const add = ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(i => snapItem(i));
+      try { await S.db.collection('reports').doc(r.id).update({ content: contentBody([...reportContent(r), ...add]), included: uniq([...(r.included || []), ...ids]), excluded: (r.excluded || []).filter(id => !ids.includes(id)) }); close(); toast(`Added ${ids.length} item${ids.length === 1 ? '' : 's'} to this report`); }
       catch (err) { x.disabled = false; writeError(err); }
     });
     document.addEventListener('keydown', onKey);
@@ -1944,15 +1987,13 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     const preview = () => {
       if (existing) {
         const rows = reportRows(existing), op = rows.filter(x => x.status === 'open').length;
-        $('#nr-prev', o).textContent = `This report shows ${op} open and ${rows.length - op} closed item${rows.length - op === 1 ? '' : 's'}. Changing the dates doesn't change which items it shows.`;
+        $('#nr-prev', o).textContent = `This report shows ${op} open and ${rows.length - op} closed item${rows.length - op === 1 ? '' : 's'}. Changing the dates doesn't change its items.`;
         return;
       }
-      const project = $('#nr-p', o).value, live = projectReports(project).filter(x => !x.snapshot);
-      const extra = live.map(x => ({ at: Date.now(), entries: issuedEntries(x), ex: x.excluded || [] }));
-      const tmp = { id: '__new', project, createdAt: Date.now(), excluded: [], included: [] };
-      const rows = reportRows(tmp, false, extra), op = rows.filter(x => x.status === 'open').length, cl = rows.length - op, prev = latestReport(project);
-      $('#nr-prev', o).textContent = `This report will list ${op} open item${op === 1 ? '' : 's'} from the Items page${cl ? ` and ${cl} closed since the last report` : ''}, with their latest updates and photos.`
-        + (prev ? ` The ${mdy(prev.reportDate)} report's item list will be fixed as issued.` : '');
+      const project = $('#nr-p', o).value;
+      const list = buildContent(project), op = list.filter(x => x.status === 'open').length, cl = list.length - op, prev = latestReport(project);
+      $('#nr-prev', o).textContent = `This report will list ${op} open item${op === 1 ? '' : 's'} from the Items page${cl ? ` and ${cl} closed item${cl === 1 ? '' : 's'} not yet reported as CLOSED` : ''}, as they are right now, with all their updates and photos.`
+        + (prev ? ` Earlier reports stay as they are.` : '');
       const cl2 = $('#nr-cn-l', o); if (cl2) { cl2.hidden = !(prev && hasNotes(prev)); notesFrom = prev; }
       prevSort = prev && prev.sortMode && prev.sortMode !== 'manual' ? prev.sortMode : 'serial';
     };
@@ -1971,9 +2012,9 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
         if (existing) { await S.db.collection('reports').doc(existing.id).update(body); close(); toast('Report details saved'); }
         else {
           const carry = notesFrom && hasNotes(notesFrom) && $('#nr-cn', o) && $('#nr-cn', o).checked;
-          await issueReports(body.project);
-          const ref = S.db.collection('reports').doc();
-          await ref.set({ ...body, projectNo: projCfg(body.project).projectNo || '', excluded: [], included: [], sortMode: prevSort, manualOrder: [], createdAt: Date.now(), author: S.uid,
+          const ref = S.db.collection('reports').doc(), now = Date.now();
+          await ref.set({ ...body, projectNo: projCfg(body.project).projectNo || '', excluded: [], included: [], sortMode: prevSort, manualOrder: [], createdAt: now, author: S.uid,
+            content: contentBody(buildContent(body.project)), builtAt: now,
             notes: carry ? notesFrom.notes : '', notesTitle: carry ? (notesFrom.notesTitle || 'General Notes') : 'General Notes' });
           close(); toast('Report created'); S.prefs.rproject = body.project; savePrefs(); go('report', { reportId: ref.id });
         }
@@ -1999,7 +2040,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
   }
   async function copyText(r) {
     const txt = reportText(r);
-    try { await navigator.clipboard.writeText(txt); toast('Report copied. Paste it into an email or message.'); markSent(r); }
+    try { await navigator.clipboard.writeText(txt); toast('Report copied. Paste it into an email or message.'); }
     catch (e) {
       const o = document.createElement('div'); o.className = 'overlay';
       o.innerHTML = `<div class="dialog wide"><h4>Copy report text</h4><textarea class="input" id="copy-ta" style="min-height:300px;font-size:13px" readonly>${esc(txt)}</textarea><div class="actions"><button class="btn primary" data-x="close">Done</button></div></div>`;
@@ -2359,7 +2400,6 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       o.remove();
       await S.downloads.save({ filename: fname, data: blob });
       toast('PDF saved');
-      markSent(r);
     } catch (e) {
       o.remove();
       const code = e && e.code;
@@ -2488,6 +2528,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     else if (a === 'hide-row' && r) setExcluded(r, b.dataset.item, true);
     else if (a === 'mv-row' && r) moveRow(r, b.dataset.item, Number(b.dataset.d));
     else if (a === 'add-items' && r) addItemsDialog(r);
+    else if (a === 'refresh-report' && r) refreshReport(r);
     else if (a === 'show-row' && r) setExcluded(r, b.dataset.item, false);
     else if (a === 'lightbox') lightbox(S.lb[b.dataset.lb], +b.dataset.k);
     else if (a === 'cancel-item') cancelItem();
@@ -2566,7 +2607,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
   document.addEventListener('drop', (e) => { const dz = e.target.closest && e.target.closest('[data-drop]'); if (!dz) return; e.preventDefault(); dz.classList.remove('over'); const fs = Array.from(e.dataTransfer.files || []); if (fs.length) addFiles(fs); });
 
   // ---------- boot ----------
-  function onData() { ensureHistory(); if (S.view === 'item' || document.querySelector('.overlay')) return; render(); }
+  function onData() { ensureContent(); if (S.view === 'item' || document.querySelector('.overlay')) return; render(); }
   render();
   (async () => {
     const use = (n) => (window.claude && window.claude.use) ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
