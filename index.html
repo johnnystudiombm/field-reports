@@ -418,7 +418,6 @@ table.pp-table th, table.pp-table td { border: 0.6pt solid var(--pp-ink); paddin
 table.pp-table th { font-weight: 700; }
 table.pp-table td.c-n, table.pp-table td.c-s { font-weight: 700; }
 table.pp-table td.c-n { text-align: center; }
-table.pp-table td.c-sn { white-space: nowrap; font-size: 8.5pt; }
 table.pp-table tr.pp-row { cursor: pointer; }
 table.pp-table tr.pp-row:hover td { background: #f3f5fb; }
 .pp-top { display: flex; justify-content: space-between; gap: 8pt; font-size: 8.5pt; margin-bottom: 2pt; }
@@ -429,7 +428,7 @@ table.pp-table tr.pp-row:hover td { background: #f3f5fb; }
 .pp-photos { display: flex; flex-wrap: wrap; gap: 6pt 8pt; margin-top: 4pt; align-items: flex-start; }
 .pp-ph { width: min-content; min-width: 1in; display: grid; gap: 1pt; font-size: 7pt; }
 /* Photo size: the shorter side is 1" (wide photos are 1" tall, tall photos are 1" wide). */
-.pp-ph img { height: 1in; width: auto; max-width: 5.6in; object-fit: contain; display: block; }
+.pp-ph img { height: 1in; width: auto; max-width: 5.2in; object-fit: contain; display: block; }
 .pp-ph img.pt { width: 1in; height: auto; max-height: 4in; }
 .zoom-ctl { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); padding: 2px; }
 .zoom-ctl button { min-width: 34px; min-height: 32px; border: 0; background: none; border-radius: 6px; font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); cursor: pointer; }
@@ -479,7 +478,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       <span id="logo-slot"></span>
       <span class="div" aria-hidden="true"></span>
       <span class="lbl">Field Reports</span>
-      <span class="ver" title="App version">v2.7</span>
+      <span class="ver" title="App version">v2.8</span>
     </button>
     <span class="spacer"></span>
   </div>
@@ -1840,15 +1839,14 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       <p class="pp-disc">${esc(DISCLAIMER)}</p>
       <div class="pp-legend"><p>Items requiring correction/action in the field are in <b>bold</b>.</p><p>Critical items are in <span class="pp-red">red</span>.</p><p>Items from previous Field Reports marked CLOSED are removed from subsequent Field Reports.</p></div>
       ${notesBoxHTML(r)}
-      <table class="pp-table"><colgroup><col style="width:22pt"><col style="width:48pt"><col style="width:60pt"><col></colgroup>
-        <thead><tr><th style="text-align:center">#</th><th>Serial</th><th>Status</th><th>Date/Description/Photo</th></tr></thead>
+      <table class="pp-table"><colgroup><col style="width:22pt"><col style="width:60pt"><col></colgroup>
+        <thead><tr><th style="text-align:center">#</th><th>Status</th><th>Date/Description/Photo</th></tr></thead>
         <tbody>${rows.length ? rows.map((row, ri) => {
           const it = row.item, lbKey = 'r-' + it.id; S.lb[lbKey] = row.photos.filter(p => p.kind !== 'pdf');
           const loc = locationText(it), who = partiesText(it);
           let k = -1;
-          return `<tr class="pp-row ${it.critical ? 'pp-crit' : ''}" data-action="open-item" data-item="${esc(it.id)}" title="Click to edit this item">
+          return `<tr class="pp-row ${it.critical ? 'pp-crit' : ''}" data-action="open-item" data-item="${esc(it.id)}" data-serial="${esc(serialOf(it))}" title="Click to edit this item">
             <td class="c-n">${ri + 1}${S.canWrite ? `<span class="pp-tools"><button class="pp-tool" data-action="mv-row" data-item="${esc(it.id)}" data-d="-1" title="Move up" aria-label="Move ${esc(serialOf(it))} up" ${ri === 0 ? 'disabled' : ''}>↑</button><button class="pp-tool" data-action="mv-row" data-item="${esc(it.id)}" data-d="1" title="Move down" aria-label="Move ${esc(serialOf(it))} down" ${ri === rows.length - 1 ? 'disabled' : ''}>↓</button><button class="pp-tool" data-action="hide-row" data-item="${esc(it.id)}" title="Remove from this report">Remove</button></span>` : ''}</td>
-            <td class="c-sn">${esc(serialOf(it))}</td>
             <td class="c-s">${row.status === 'closed' ? 'CLOSED' : 'OPEN'}</td>
             <td>${loc || who ? `<div class="pp-top"><span class="l">${esc(loc)}</span><span class="r">${esc(who)}</span></div>` : ''}
               ${it.title ? `<div class="pp-head">${esc(it.title)}</div>` : ''}
@@ -2053,7 +2051,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     const L = [reportTitle(r), `Project: ${r.project}${projCfg(r.project).projectNo ? ' (' + projCfg(r.project).projectNo + ')' : ''}`, `Date: ${longDate(r.reportDate)}`, `Site Meeting: ${longDate(siteOf(r))}`, `Revision: ${r.revision || 'n/a'}`, ''];
     if (hasNotes(r)) L.push((r.notesTitle || 'General Notes').toUpperCase(), richToPlain(r.notes).trim(), '');
     reportRows(r).forEach(({ item: i, status, updates }, ri) => {
-      L.push(`${ri + 1}. ${serialOf(i)} [${status.toUpperCase()}] ${i.title || ''}${i.critical ? ' (CRITICAL)' : ''}`);
+      L.push(`${ri + 1}. [${status.toUpperCase()}] ${i.title || ''}${i.critical ? ' (CRITICAL)' : ''}`);
       const meta = [locationText(i), partiesText(i) ? 'Responsible: ' + partiesText(i) : ''].filter(Boolean);
       if (meta.length) L.push(meta.join(' | '));
       if (i.desc) L.push(richToPlain(i.desc));
@@ -2207,7 +2205,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     const doc = new JsPDF({ unit: 'pt', format: 'letter', compress: true });
     const W = 612, H = 792, M = 72, TOP = 72, BOTTOM = H - 64;
     const INK = [0, 0, 0], RED = [204, 0, 0], GREY = [85, 85, 85];
-    const COLS = [M, M + 22, M + 70, M + 130, W - M]; // # | Serial | Status | Description
+    const COLS = [M, M + 22, M + 82, W - M]; // # | Status | Description
     const PAD = 4, FS = 9, LH = 10.6, PH = 72, PH_MAXH = 288, PH_GAP = 8;
     let y = TOP;
     const header = () => {
@@ -2295,12 +2293,12 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
     y += 22;
 
     // ---- items table ----
-    const cellX = COLS[3] + PAD, cellW = COLS[4] - COLS[3] - 2 * PAD;
-    const frame = (top, bottom) => { doc.setDrawColor(...INK); doc.setLineWidth(0.6); for (let i = 0; i < 4; i++) doc.rect(COLS[i], top, COLS[i + 1] - COLS[i], bottom - top); };
+    const cellX = COLS[2] + PAD, cellW = COLS[3] - COLS[2] - 2 * PAD;
+    const frame = (top, bottom) => { doc.setDrawColor(...INK); doc.setLineWidth(0.6); for (let i = 0; i < 3; i++) doc.rect(COLS[i], top, COLS[i + 1] - COLS[i], bottom - top); };
     const hh = 13; if (y + hh + 40 > BOTTOM) newPage();
     frame(y, y + hh);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(FS); doc.setTextColor(...INK);
-    doc.text('#', (COLS[0] + COLS[1]) / 2, y + 9.5, { align: 'center' }); doc.text('Serial', COLS[1] + PAD, y + 9.5); doc.text('Status', COLS[2] + PAD, y + 9.5); doc.text('Date/Description/Photo', COLS[3] + PAD, y + 9.5);
+    doc.text('#', (COLS[0] + COLS[1]) / 2, y + 9.5, { align: 'center' }); doc.text('Status', COLS[1] + PAD, y + 9.5); doc.text('Date/Description/Photo', COLS[2] + PAD, y + 9.5);
     y += hh;
     if (!R.items.length) { frame(y, y + 20); doc.setFont('helvetica', 'normal'); doc.text('No items for this report.', cellX, y + 13); y += 20; }
 
@@ -2341,8 +2339,7 @@ tr.pp-row:hover .pp-tools, .pp-tools:focus-within { visibility: visible; }
       const labels = () => {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(FS); doc.setTextColor(...INK);
         doc.text(String(it.idx || ''), (COLS[0] + COLS[1]) / 2, segTop + PAD + 7.6, { align: 'center' });
-        doc.text(String(it.statusLabel || '').toUpperCase(), COLS[2] + PAD, segTop + PAD + 7.6);
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.text(String(it.serial || ''), COLS[1] + PAD, segTop + PAD + 7.6);
+        doc.text(String(it.statusLabel || '').toUpperCase(), COLS[1] + PAD, segTop + PAD + 7.6);
       };
       labels(); y += PAD;
       blocks.forEach(b => {
